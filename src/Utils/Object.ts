@@ -1,10 +1,44 @@
-import { Request, Response, NextFunction } from 'express';
+import Joi, { any } from 'joi';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { RequestHandler } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { CustomHelpers } from 'joi';
+import nodemailer from 'nodemailer';
+import express, { Request, Response, NextFunction } from 'express';
+import multer from 'multer';
+import path from 'path';
+import prisma from '../lib/db';
+const fs = require('fs');
 
-// ประกาศ checkHeader ใน Request object ของ Express
-declare global {
-    namespace Express {
-        interface Request {
-            checkHeader?: string;
-        }
+require('dotenv').config();
+const expirationTime = process.env.EXPIRATION_TIME;
+
+//! ตรวจสอบ token และบันทึก log เมื่อหมดอายุ
+const handleTokenExpiration = async (token: string, user: string) => {
+    const tokenExists = await prisma.tokenUser.findFirst({
+        where: {
+            TokenValue: token,
+        },
+    });
+    if (!tokenExists) {
+        return console.log('None Token delete Login');
     }
-}
+    if (tokenExists.UserID) {
+        // บันทึก LogOut โดยอัตโนมัติ
+        await prisma.log_History.create({
+            data: {
+                UserID: user,
+                TypeLogger: 'LogOut ExpirationTime',
+            },
+        });
+        // หา token แล้วให้ทำการลบ
+        await prisma.tokenUser.delete({
+            where: {
+                TokenID: tokenExists.TokenID,
+            },
+        });
+    }
+};
+
+export { handleTokenExpiration };

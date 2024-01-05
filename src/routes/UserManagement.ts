@@ -1,13 +1,11 @@
 import express from 'express';
-import { getUserORAdmin, addUserOrAdmin, deleteUserOrAdmin, updateUserOrAdmin, getUserAdminByID, LoginManagement, LogoutManagement } from '../controllers/authUserManagement';
+import { getUser, addUser, deleteUser, updateUser, getUserByID, } from '../controllers/authUserManagement';
 const root = express.Router();
 
-root.get('/getUserORAdmin', getUserORAdmin);
-root.get('/getUserAdminByID', getUserAdminByID);
-root.post('/addUserOrAdmin', addUserOrAdmin);
-root.post('/LoginManagement', LoginManagement);
-root.post('/LogoutManagement', LogoutManagement);
-root.delete('/deleteUserOrAdmin', deleteUserOrAdmin);
-root.patch('/updateUserOrAdmin', updateUserOrAdmin);
+root.get('/getUser', getUser);
+root.get('/getUserByID', getUserByID);
+root.post('/addUser', addUser);
+root.delete('/deleteUser', deleteUser);
+root.patch('/updateUser', updateUser);
 
 export default root;

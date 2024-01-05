@@ -5,7 +5,8 @@ import morgan from 'morgan';
 import config from './config';
 import errorHandler from './middleware/errorHandler';
 import fourOhFour from './middleware/fourOhFour';
-import UserOrAdmin from './routes/UserManagement';
+import User from './routes/UserManagement';
+import Token from './routes/Login';
 import multer from 'multer';
 
 const app = express();
@@ -23,7 +24,8 @@ app.use(helmet());
 app.use(morgan('tiny'));
 
 // Apply routes before error handling
-app.use('/UserOrAdmin', UserOrAdmin);
+app.use('/User', User );
+app.use('/Token', Token);
 // app.use('/', test);
 
 
