@@ -75,7 +75,7 @@ const addUser: RequestHandler = async (req, res) => {
         Expireddate: Joi.date().required(),
         Question: Joi.string().max(255),
         Answer: Joi.string().max(255),
-        Status: Joi.boolean(),
+        Statused: Joi.boolean(),
 
         //!Tab2
         Title: Joi.string().max(55).required(),
@@ -159,7 +159,7 @@ const addUser: RequestHandler = async (req, res) => {
             Expireddate: validatedData.Expireddate,
             Question: validatedData.Question,
             Answer: validatedData.Answer,
-            Status: validatedData.Status,
+            Statused: validatedData.Statused,
             //!Tab2
             Title: validatedData.Title,
             Firstname: validatedData.Firstname,
@@ -300,8 +300,8 @@ const updateUser: RequestHandler = async (req, res) => {
         if (body.Answer) {
             payload['Answer'] = body.Answer;
         }
-        if (body.Status) {
-            payload['Status'] = body.Status;
+        if (body.Statused) {
+            payload['Statused'] = body.Statused;
         }
 
         //!Tab2

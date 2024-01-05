@@ -41,4 +41,10 @@ const handleTokenExpiration = async (token: string, user: string) => {
     }
 };
 
-export { handleTokenExpiration };
+function generateOTP() {
+    // สร้าง OTP 6 หลัก
+    const otp = Math.floor(100000 + Math.random() * 900000);
+    return otp.toString();
+}
+
+export { handleTokenExpiration, generateOTP };

@@ -9,6 +9,9 @@ import User from './routes/UserManagement';
 import Token from './routes/Login';
 import multer from 'multer';
 
+//! AE router
+import user from './routes/user';
+
 const app = express();
 
 // Apply most middleware first
@@ -24,7 +27,8 @@ app.use(helmet());
 app.use(morgan('tiny'));
 
 // Apply routes before error handling
-app.use('/User', User );
+app.use('/authUser', User );
+app.use('/user', user );
 app.use('/Token', Token);
 // app.use('/', test);
 
