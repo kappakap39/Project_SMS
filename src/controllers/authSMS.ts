@@ -10,7 +10,7 @@ require('dotenv').config();
 const expirationTime = process.env.EXPIRATION_TIME;
 
 //! sentSms
-const sentSMS: RequestHandler = async (req, res) => {
+const sentSMS: RequestHandler = async (req, res, next) => {
     const SECRET_KEY = process.env.SECRET_KEY || 'default_secret_key';
     const token = req.headers.authorization?.split(' ')[1];
     console.log('Token ', token);
@@ -35,13 +35,12 @@ const sentSMS: RequestHandler = async (req, res) => {
         return res.status(403).json({ error: 'None User' });
     }
     //! กำหนดค่าการกำหนดค่าสำหรับ Nodemailer
-    const transport = nodemailer.createTransport({
-        // host: 'sandbox.smtp.mailtrap.io',
-        host: 'smtp.mailtrap.io',
+    var transport = nodemailer.createTransport({
+        host: 'sandbox.smtp.mailtrap.io',
         port: 2525,
         auth: {
-            user: '0f64a4a99b6aed',
-            pass: '2b0449004b7be8',
+            user: 'e9596c882bd1f2',
+            pass: '04ac8f11585b38',
         },
     });
     // create schema object
@@ -110,14 +109,18 @@ const sentSMS: RequestHandler = async (req, res) => {
             // to: `theerwat@gmail.com`,
             subject: user.Firstname,
             text: `Sender is: ${user.Username}`,
-            html: `<div style="background-color: black; color: white; text-align: center; padding: 20px;">
-            <h3>Tel is : ${user.Tel} or ${body.Tel}</h3>
-            <h3 style="color: white;">sent mail to ${user.Firstname} ${user.Lastname}</h3>
-            <h3>Result is: ${body.Result}</h3>
-            <h3>Contact is: ${body.Contact}</h3>
-            <h3>ScheduleDate is: ${body.ScheduleDate}</h3>
-            <h3>Option is: ${body.Option}</h3>
-            <h3>Description is: ${body.Description}</h3>
+            html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
+            <div style=3D"color: yellow; text-align: center;" >
+                <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
+            </div>
+            <div style=3D"display: flex; text-align: center;" >
+                <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${body.Tel}</h5>
+                <h5 style="margin-right: 10%;">Option is: ${body.Option}</h5>
+                <h5 style="margin-right: 10%;">Result is: ${body.Result}</h5>
+                <h5 style="margin-right: 10%;">Contact is: ${body.Contact}</h5>
+                <h5 style="margin-right: 10%;">ScheduleDate is: ${body.ScheduleDate}</h5>
+                <h5>Description is: ${body.Description}</h5>
+            </div>
             <h6>Message is: ${body.Message}</h6>
             </div>`,
         });

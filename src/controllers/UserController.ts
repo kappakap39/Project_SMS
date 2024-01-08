@@ -267,4 +267,35 @@ const deleteUser: RequestHandler = async (req, res) => {
     return res.json(deleteUser);
 };
 
-export { getUser, addUser, updateUser, deleteUser, getUserByID };
+const searchUsers: RequestHandler = async (req, res) => {
+    const { query } = req.query as { query: string };
+
+    try {
+        const users = await prisma.userManagement.findMany({
+            where: {
+                OR: [
+                    { Username: { contains: query.toLowerCase() } },
+                    { Userlevel: { contains: query.toLowerCase() } },
+                    { Question: { contains: query.toLowerCase() } },
+                    { Answer: { contains: query.toLowerCase() } },
+                    { Title: { contains: query.toLowerCase() } },
+                    { Firstname: { contains: query.toLowerCase() } },
+                    { Lastname: { contains: query.toLowerCase() } },
+                    { Abbreviatename: { contains: query.toLowerCase() } },
+                    { Email: { contains: query.toLowerCase() } },
+                    { Tel: { contains: query.toLowerCase() } },
+                    { CitiZenID: { contains: query.toLowerCase() } },
+                    { Picture: { contains: query.toLowerCase() } },
+                    { Statused: { equals: query.toLowerCase() === 'true' } },
+                ],
+            },
+        });
+
+        res.json(users);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+export { getUser, addUser, updateUser, deleteUser, getUserByID, searchUsers };

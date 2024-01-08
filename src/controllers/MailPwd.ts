@@ -48,13 +48,12 @@ const SentMailPwd: RequestHandler = async (req, res, next) => {
         // สร้าง OTP
         const otp = await generateOTP();
         //! กำหนดค่าการกำหนดค่าสำหรับ Nodemailer
-        const transport = nodemailer.createTransport({
-            // host: 'sandbox.smtp.mailtrap.io',
-            host: 'smtp.mailtrap.io',
+        var transport = nodemailer.createTransport({
+            host: 'sandbox.smtp.mailtrap.io',
             port: 2525,
             auth: {
-                user: '0f64a4a99b6aed',
-                pass: '2b0449004b7be8',
+                user: 'e9596c882bd1f2',
+                pass: '04ac8f11585b38',
             },
         });
         //! update otp to user ID
@@ -173,7 +172,7 @@ const CheckOTP = async (req: Request, res: Response) => {
             return res.status(403).json({ expirationTime: 'OTP None' });
         }
         // ส่งข้อมูล Token และข้อมูลที่ถอดรหัสได้กลับ
-        return res.status(200).json({'otpExpired:': otpExpired, "OTPCheck:": OTPCheck, "UserID": user.UserID});
+        return res.status(200).json({ 'otpExpired:': otpExpired, 'OTPCheck:': OTPCheck, UserID: user.UserID });
     } catch (error) {
         console.error('Error:', error);
         return res.status(500).json({ error: 'Internal Server Error' });

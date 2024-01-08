@@ -4,11 +4,13 @@ CREATE TABLE "UserManagement" (
     "Username" VARCHAR(255) NOT NULL,
     "Password" VARCHAR(255) NOT NULL,
     "Userlevel" VARCHAR(255),
+    "OTP" VARCHAR(6),
+    "OtpExpired" TIMESTAMP,
     "Effectivedate" DATE NOT NULL,
     "Expireddate" DATE NOT NULL,
     "Question" VARCHAR(255),
     "Answer" VARCHAR(255),
-    "Status" BOOLEAN NOT NULL DEFAULT true,
+    "Statused" BOOLEAN NOT NULL DEFAULT true,
     "Title" VARCHAR(55) NOT NULL,
     "Firstname" VARCHAR(255) NOT NULL,
     "Lastname" VARCHAR(255) NOT NULL,
@@ -43,6 +45,34 @@ CREATE TABLE "UserManagement" (
 );
 
 -- CreateTable
+CREATE TABLE "SMSManagement" (
+    "SMS_ID" UUID NOT NULL,
+    "UserID" UUID NOT NULL,
+    "Sender" TEXT,
+    "Tel" TEXT,
+    "Result" TEXT,
+    "Contact" TEXT,
+    "ScheduleDate" TIMESTAMP(3),
+    "Option" TEXT,
+    "Description" TEXT DEFAULT '${SmsManagement.Result}',
+    "CreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SMSManagement_pkey" PRIMARY KEY ("SMS_ID")
+);
+
+-- CreateTable
+CREATE TABLE "SMSMessage" (
+    "MessageID" UUID NOT NULL,
+    "SMS_ID" UUID NOT NULL,
+    "Message" VARCHAR(255),
+    "CreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SMSMessage_pkey" PRIMARY KEY ("MessageID")
+);
+
+-- CreateTable
 CREATE TABLE "TokenUser" (
     "TokenID" UUID NOT NULL,
     "CreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -67,6 +97,12 @@ CREATE TABLE "Log_History" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "UserManagement_Email_key" ON "UserManagement"("Email");
+
+-- AddForeignKey
+ALTER TABLE "SMSManagement" ADD CONSTRAINT "SMSManagement_UserID_fkey" FOREIGN KEY ("UserID") REFERENCES "UserManagement"("UserID") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "SMSMessage" ADD CONSTRAINT "SMSMessage_SMS_ID_fkey" FOREIGN KEY ("SMS_ID") REFERENCES "SMSManagement"("SMS_ID") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TokenUser" ADD CONSTRAINT "TokenUser_UserID_fkey" FOREIGN KEY ("UserID") REFERENCES "UserManagement"("UserID") ON DELETE RESTRICT ON UPDATE CASCADE;

@@ -85,8 +85,16 @@ const authToken: RequestHandler = async (req, res, next) => {
 
         next();
     } catch (error) {
-        console.error('checkHeader error:', error);
-        res.status(500).json({ success: false, error: 'req.headers.authorization Server Error' });
+        if (error instanceof jwt.JsonWebTokenError) {
+            console.error('JWT Error:', error.message);
+            res.status(403).json({ error: 'Invalid token' });
+        } else if (error instanceof jwt.TokenExpiredError) {
+            console.error('Token Expired:', error.message);
+            res.status(403).json({ error: 'Token expired' });
+        } else {
+            console.error('Unknown Error:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
     }
 };
 export { authToken };
