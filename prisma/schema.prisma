@@ -16,15 +16,16 @@ model UserManagement {
   UserID String @id @default(uuid()) @db.Uuid
 
   //!Tab1
-  Username      String   @db.VarChar(255)
-  Password      String   @db.VarChar(255)
-  Userlevel     String?  @db.VarChar(255)
-  OTP           String?  @db.VarChar(6)
-  Effectivedate DateTime @db.Date()
-  Expireddate   DateTime @db.Date()
-  Question      String?  @db.VarChar(255)
-  Answer        String?  @db.VarChar(255)
-  Statused      Boolean  @default(true)
+  Username      String    @db.VarChar(255)
+  Password      String    @db.VarChar(255)
+  Userlevel     String?   @db.VarChar(255)
+  OTP           String?   @db.VarChar(6)
+  OtpExpired    DateTime? @db.Timestamp()
+  Effectivedate DateTime  @db.Date()
+  Expireddate   DateTime  @db.Date()
+  Question      String?   @db.VarChar(255)
+  Answer        String?   @db.VarChar(255)
+  Statused      Boolean   @default(true)
 
   //!Tab2
   Title          String  @db.VarChar(55)
