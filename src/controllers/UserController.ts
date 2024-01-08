@@ -43,7 +43,7 @@ const addUser: RequestHandler = async (req, res) => {
         Email: Joi.string().min(1).max(255).required(),
         Tel: Joi.string().min(1).max(10).required(),
         CitiZenID: Joi.string().min(1).max(13).required(),
-        Picture: Joi.string().min(1).max(255).required(),
+        Picture: Joi.string(),
     });
 
     // schema options

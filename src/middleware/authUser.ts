@@ -8,18 +8,6 @@ import jwt from 'jsonwebtoken';
 import prisma from '../lib/db';
 import Joi, { any } from 'joi';
 
-// กำหนดฟังก์ชั่นสำหรับตรวจสอบ verifyToken Token
-// ให้ฟังก์ชัน verifyToken รับค่าเป็น union type
-const verifyToken = (tokenCheck: string, SECRET_KEY: string) => {
-    try {
-        const decoded = jwt.verify(tokenCheck, SECRET_KEY);
-        return decoded;
-    } catch (error) {
-        console.error('Error verifying token:', error);
-        return null;
-    }
-};
-
 // Middleware สำหรับตรวจสอบ Token ใน Header
 const authToken: RequestHandler = async (req, res, next) => {
     // ตรวจสอบการมี Header Authorization ใน Request
@@ -47,8 +35,8 @@ const authToken: RequestHandler = async (req, res, next) => {
         // console.log('SECRET_KEY:', JSON.stringify(SECRET_KEY));
 
         // ตรวจสอบ Token ด้วยฟังก์ชั่น verifyToken
-        const decodedToken = verifyToken(tokenCheck, SECRET_KEY) as { IDUserOrAdmin: string; exp: number };
-        console.log('decodedToken:', decodedToken.IDUserOrAdmin);
+        const decodedToken = jwt.verify(tokenCheck, SECRET_KEY) as { UserID: string; exp: number };
+        console.log('decodedToken:', decodedToken.UserID);
 
         // หาก Token ถูกต้อง มีในฐานข้อมูล
         if (decodedToken) {
@@ -64,7 +52,7 @@ const authToken: RequestHandler = async (req, res, next) => {
         const tokenUser = await prisma.tokenUser.findFirst({
             where: {
                 TokenValue: tokenCheck,
-                IDUserOrAdmin: decodedToken.IDUserOrAdmin,
+                UserID: decodedToken.UserID,
                 Expiration: {
                     gte: new Date(),
                 },

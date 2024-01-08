@@ -64,43 +64,42 @@ model UserManagement {
   CreatedAt DateTime @default(now())
   UpdatedAt DateTime @updatedAt
 
-  // smsManagement SmsManagement[] @relation("SmsManagements")
+  smsManagement SMSManagement[] @relation("SMSManagements")
 
   tokenUser TokenUser[] @relation(name: "TokenUser")
 
   log_History Log_History[] @relation(name: "LogHistory")
 }
 
-// model SmsManagement {
-//   SmsID        String    @id @default(uuid()) @db.Uuid
-//   UserID       String    @db.Uuid
-//   // IDUserOrAdmin String?
-//   Sender       String?
-//   Tel          String?
-//   Result       String?
-//   Contact      String?
-//   ScheduleDate DateTime?
-//   Option       String?
-//   Description  String?   @default("${SmsManagement.Result}")
-//   //!Standard
-//   CreatedAt    DateTime  @default(now())
-//   UpdatedAt    DateTime  @updatedAt
+model SMSManagement {
+  SMS_ID       String    @id @default(uuid()) @db.Uuid
+  UserID       String    @db.Uuid
+  Sender       String?
+  Tel          String?
+  Result       String?
+  Contact      String?
+  ScheduleDate DateTime?
+  Option       String?
+  Description  String?   @default("${SmsManagement.Result}")
+  //!Standard
+  CreatedAt    DateTime  @default(now())
+  UpdatedAt    DateTime  @updatedAt
 
-//   smsMessage SmsMessage[] @relation("Messages")
+  smsMessage SMSMessage[] @relation("Messages")
 
-//   userManagement UserManagement @relation(name: "SmsManagements", fields: [UserID], references: [UserID])
-// }
+  userManagement UserManagement @relation(name: "SMSManagements", fields: [UserID], references: [UserID])
+}
 
-// model SmsMessage {
-//   MessageID String   @id @default(uuid()) @db.Uuid
-//   SmsID     String   @db.Uuid
-//   Message   String?  @db.VarChar(255)
-//   //!Standard
-//   CreatedAt DateTime @default(now())
-//   UpdatedAt DateTime @updatedAt
+model SMSMessage {
+  MessageID String   @id @default(uuid()) @db.Uuid
+  SMS_ID     String   @db.Uuid
+  Message   String?  @db.VarChar(255)
+  //!Standard
+  CreatedAt DateTime @default(now())
+  UpdatedAt DateTime @updatedAt
 
-//   smsManagement SmsManagement @relation(name: "Messages", fields: [SmsID], references: [SmsID])
-// }
+  smsManagement SMSManagement @relation(name: "Messages", fields: [SMS_ID], references: [SMS_ID])
+}
 
 model TokenUser {
   TokenID        String         @id @default(uuid()) @db.Uuid

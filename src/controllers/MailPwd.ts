@@ -109,7 +109,7 @@ const SentMailPwd: RequestHandler = async (req, res, next) => {
 };
 
 //!Verify to Add Token
-const VerifyToken = async (req: Request, res: Response) => {
+const CheckOTP = async (req: Request, res: Response) => {
     const { Email, OTP } = req.body;
     try {
         // ตรวจสอบความถูกต้องของข้อมูลที่รับมา
@@ -173,7 +173,7 @@ const VerifyToken = async (req: Request, res: Response) => {
             return res.status(403).json({ expirationTime: 'OTP None' });
         }
         // ส่งข้อมูล Token และข้อมูลที่ถอดรหัสได้กลับ
-        return res.status(200).json({'otpExpired:': otpExpired, "OTPCheck:": OTPCheck});
+        return res.status(200).json({'otpExpired:': otpExpired, "OTPCheck:": OTPCheck, "UserID": user.UserID});
     } catch (error) {
         console.error('Error:', error);
         return res.status(500).json({ error: 'Internal Server Error' });
@@ -183,4 +183,4 @@ const VerifyToken = async (req: Request, res: Response) => {
     }
 };
 
-export { SentMailPwd, VerifyToken };
+export { SentMailPwd, CheckOTP };

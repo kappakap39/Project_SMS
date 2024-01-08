@@ -278,12 +278,15 @@ const updateUser: RequestHandler = async (req, res) => {
             return res.status(422).json({ error: 'checkUser not found' });
         }
 
+        // ใช้ Bcrypt เพื่อแฮชรหัสผ่าน
+        const hashedPassword = await bcrypt.hash( body.Password, 10);
+
         //!Tab1
         if (body.Username) {
             payload['Username'] = body.Username;
         }
         if (body.Password) {
-            payload['Password'] = body.Password;
+            payload['Password'] = hashedPassword;
         }
         if (body.Userlevel) {
             payload['Userlevel'] = body.Userlevel;
