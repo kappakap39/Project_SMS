@@ -122,7 +122,6 @@ const sentSMS: RequestHandler = async (req, res, next) => {
                 const info = await transport.sendMail({
                     from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
                     to: user.Email,
-                    // to: `theerwat@gmail.com`,
                     subject: user.Firstname,
                     text: `Sender is: ${user.Username}`,
                     html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
@@ -152,7 +151,6 @@ const sentSMS: RequestHandler = async (req, res, next) => {
             const info = await transport.sendMail({
                 from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
                 to: user.Email,
-                // to: `theerwat@gmail.com`,
                 subject: user.Firstname,
                 text: `Sender is: ${user.Username}`,
                 html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
