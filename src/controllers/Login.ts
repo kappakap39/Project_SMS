@@ -10,9 +10,6 @@ import multer from 'multer';
 import path from 'path';
 import prisma from '../lib/db';
 import { handleTokenExpiration } from '../Utils/Object';
-const fs = require('fs');
-
-require('dotenv').config();
 const expirationTime = process.env.EXPIRATION_TIME;
 
 //! Add Token

@@ -6,12 +6,12 @@ import prisma from '../lib/db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { handleTokenExpiration, generateOTP } from '../Utils/Object';
-
-require('dotenv').config();
 const expirationTime = process.env.EXPIRATION_TIME;
 
 const SentMailPwd: RequestHandler = async (req, res, next) => {
     const { Email } = req.body;
+    // สร้าง OTP
+    const otp = await generateOTP();
     try {
         const schema = Joi.object({
             Email: Joi.string().email().min(1).max(255).required(),
@@ -45,17 +45,26 @@ const SentMailPwd: RequestHandler = async (req, res, next) => {
         if (!user) {
             return res.status(403).json({ error: 'None User' });
         }
-        // สร้าง OTP
-        const otp = await generateOTP();
+
         //! กำหนดค่าการกำหนดค่าสำหรับ Nodemailer
-        var transport = nodemailer.createTransport({
+        const transport = nodemailer.createTransport({
             host: 'sandbox.smtp.mailtrap.io',
             port: 2525,
             auth: {
-                user: 'e9596c882bd1f2',
-                pass: '04ac8f11585b38',
+                user: 'eb96c9bf8c2ce8',
+                pass: 'cfb075837bf7c1',
             },
         });
+        // เพิ่มการตรวจสอบขีดจำกัดของอีเมล์และเตือน
+        transport.verify(function (error, success) {
+            if (error) {
+                console.error('Mailtrap connection error:', error);
+                return res.status(201).json({ 'Mailtrap connection error:': error });
+            } else {
+                console.log('Mailtrap connection successful');
+            }
+        });
+
         //! update otp to user ID
         // กำหนดข้อมูลที่จะใส่ใน Token
         const currentTime = new Date();

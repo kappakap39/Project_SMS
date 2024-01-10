@@ -8,10 +8,8 @@ import nodemailer from 'nodemailer';
 import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
+import { upload, generateFileKey } from '../Utils/Upload';
 import prisma from '../lib/db';
-const fs = require('fs');
-
-require('dotenv').config();
 const expirationTime = process.env.EXPIRATION_TIME;
 
 const getUser: RequestHandler = async (req, res) => {
@@ -131,6 +129,7 @@ const addUser: RequestHandler = async (req, res) => {
     const prisma = new PrismaClient();
 
     try {
+
         const duplicateUser = await prisma.userManagement.findMany({
             where: {
                 OR: [{ Email: { contains: validatedData.Email } }],
