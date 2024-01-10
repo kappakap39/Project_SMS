@@ -4,6 +4,9 @@
 
 ## Usage:
 
+# ติดตั้ง date ในการ settime
+*"npm install date-fns or yarn add date-fns"*
+
 You should copy `.env.sample` to `.env` and then:
 
 `yarn install` - Install package.json
