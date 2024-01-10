@@ -5,8 +5,10 @@ import nodemailer from 'nodemailer';
 import prisma from '../lib/db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { isPast, parseISO } from 'date-fns';
 const expirationTime = process.env.EXPIRATION_TIME;
+
+import { isPast, parseISO, format, addHours } from 'date-fns';
+import { th } from 'date-fns/locale/th';
 
 //! sentSms
 const sentSMS: RequestHandler = async (req, res, next) => {
@@ -114,9 +116,23 @@ const sentSMS: RequestHandler = async (req, res, next) => {
         }
 
         if (scheduleDate && !isPast(scheduleDate)) {
+            // !isPast(scheduleDate) ไม่ใช่อดีต
             // ถ้า ScheduleDate ถูกกำหนดและไม่ได้อยู่ในอดีต
             // คำนวณเวลาที่ต้องการส่งอีเมล์โดยหาความแตกต่างของเวลาปัจจุบันกับ ScheduleDate
             const millisecondsUntilScheduledTime = scheduleDate.getTime() - Date.now();
+
+            // ประกาศ Timezone ที่ต้องการใช้
+            // const timeZoneOffsetInHours = 7; // UTC+7 for Bangkok
+            // แปลง scheduleDate เป็นเวลาใน timezone ที่ต้องการ
+            // const scheduleDateInLocalTimezone = addHours(scheduleDate, timeZoneOffsetInHours);
+            // สร้าง string ที่แสดงเวลาในรูปแบบที่ต้องการ (เช่น "วันที่ 1 มกราคม 2565 เวลา 10:00 น.")
+            // const formattedScheduleDate = format(scheduleDateInLocalTimezone, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
+            //     locale: th,
+            // });
+            const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
+                locale: th,
+            });
+
             setTimeout(async () => {
                 // ส่งอีเมล์ที่นี่
                 const info = await transport.sendMail({
@@ -134,18 +150,31 @@ const sentSMS: RequestHandler = async (req, res, next) => {
                     <h5 style="margin-right: 10%;">Result is: ${body.Result}</h5>
                     <h5 style="margin-right: 10%;">Contact is: ${body.Contact}</h5>
                     <h5 style="margin-right: 10%;">ScheduleDate is: ${scheduleDate}</h5>
+                    <h5 style="margin-right: 10%;">Date time thai is: ${formattedScheduleDate}</h5>
                     <h5>Description is: ${body.Description}</h5>
                 </div>
                 <h6>Message is: ${body.Message}</h6>
                 </div>`,
                 });
-
-                // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
-                return res
-                    .status(201)
-                    .json({ Management, Message: 'Messages created and email scheduled successfully' });
             }, millisecondsUntilScheduledTime);
+            // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
+            return res.status(201).json({ Management, Message: 'Messages created and email scheduled successfully' });
         } else {
+            if (scheduleDate && isPast(scheduleDate)) {
+                const scheduleDateInLocalTimezone = addHours(scheduleDate, 7);
+                // สร้าง string ที่แสดงเวลาในรูปแบบที่ต้องการ (เช่น "วันที่ 1 มกราคม 2565 เวลา 10:00 น.")
+                const formattedScheduleDate = format(
+                    scheduleDateInLocalTimezone,
+                    "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'",
+                    {
+                        locale: th,
+                    },
+                );
+                console.log('Scheduled time is in the past', scheduleDate);
+                console.log('scheduleDateInLocalTimezone', scheduleDateInLocalTimezone);
+                // return res.status(400).json({ error: 'Scheduled time is in the past' });
+            }
+
             // ถ้า ScheduleDate ไม่ได้ระบุ
             // ส่งอีเมล์ทันที
             const info = await transport.sendMail({
@@ -162,13 +191,12 @@ const sentSMS: RequestHandler = async (req, res, next) => {
                     <h5 style="margin-right: 10%;">Option is: ${body.Option}</h5>
                     <h5 style="margin-right: 10%;">Result is: ${body.Result}</h5>
                     <h5 style="margin-right: 10%;">Contact is: ${body.Contact}</h5>
-                    <h5 style="margin-right: 10%;">ScheduleDate is: ${scheduleDate}</h5>
+                    <h5 style="margin-right: 10%;">ScheduleDate is null: ${scheduleDate}</h5>
                     <h5>Description is: ${body.Description}</h5>
                 </div>
                 <h6>Message is: ${body.Message}</h6>
                 </div>`,
             });
-
             // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
             return res.status(201).json({ Management, Message: 'Messages created and email sent successfully' });
         }

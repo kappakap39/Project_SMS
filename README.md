@@ -1,11 +1,11 @@
-# Node Express & Typescript Starter for 2022
+# phuwadon
 # 
 *"A minimally opinionated typescript & express starter for 2022"*
 
 ## Usage:
 
 # ติดตั้ง date ในการ settime
-*"npm install date-fns or yarn add date-fns"*
+*"npm install date-fns or yarn add date-fns "*
 
 You should copy `.env.sample` to `.env` and then:
 
