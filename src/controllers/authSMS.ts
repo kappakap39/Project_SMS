@@ -5,6 +5,7 @@ import nodemailer from 'nodemailer';
 import prisma from '../lib/db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { isPast, parseISO } from 'date-fns';
 const expirationTime = process.env.EXPIRATION_TIME;
 
 //! sentSms
@@ -41,6 +42,7 @@ const sentSMS: RequestHandler = async (req, res, next) => {
             pass: 'cfb075837bf7c1',
         },
     });
+
     // เพิ่มการตรวจสอบขีดจำกัดของอีเมล์และเตือน
     transport.verify(function (error, success) {
         if (error) {
@@ -59,7 +61,7 @@ const sentSMS: RequestHandler = async (req, res, next) => {
         Tel: Joi.string(),
         Result: Joi.string(),
         Contact: Joi.string(),
-        ScheduleDate: Joi.date(),
+        ScheduleDate: Joi.date().iso(),
         Option: Joi.string(),
         Description: Joi.string(),
         Message: Joi.string(),
@@ -79,7 +81,7 @@ const sentSMS: RequestHandler = async (req, res, next) => {
         });
     }
     const body = req.body;
-
+    const scheduleDate = body.ScheduleDate ? parseISO(body.ScheduleDate) : null;
     return await prisma.$transaction(async function (tx) {
         const payload: any = {
             UserID: decodedToken.UserID,
@@ -87,7 +89,7 @@ const sentSMS: RequestHandler = async (req, res, next) => {
             Tel: body.Tel,
             Result: body.Result,
             Contact: body.Contact,
-            ScheduleDate: body.ScheduleDate,
+            ScheduleDate: scheduleDate,
             Option: body.Option,
             Description: body.Description,
         };
@@ -111,29 +113,67 @@ const sentSMS: RequestHandler = async (req, res, next) => {
             });
         }
 
-        const info = await transport.sendMail({
-            from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-            to: user.Email,
-            // to: `theerwat@gmail.com`,
-            subject: user.Firstname,
-            text: `Sender is: ${user.Username}`,
-            html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-            <div style=3D"color: yellow; text-align: center;" >
-                <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-            </div>
-            <div style=3D"display: flex; text-align: center;" >
-                <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${body.Tel}</h5>
-                <h5 style="margin-right: 10%;">Option is: ${body.Option}</h5>
-                <h5 style="margin-right: 10%;">Result is: ${body.Result}</h5>
-                <h5 style="margin-right: 10%;">Contact is: ${body.Contact}</h5>
-                <h5 style="margin-right: 10%;">ScheduleDate is: ${body.ScheduleDate}</h5>
-                <h5>Description is: ${body.Description}</h5>
-            </div>
-            <h6>Message is: ${body.Message}</h6>
-            </div>`,
-        });
-        // ส่งข้อมูลกลับไปยังผู้ใช้พร้อมกับข้อความแจ้งผลการทำงาน
-        return res.status(201).json({ Management, Message: 'Messages created successfully' });
+        if (scheduleDate && !isPast(scheduleDate)) {
+            // ถ้า ScheduleDate ถูกกำหนดและไม่ได้อยู่ในอดีต
+            // คำนวณเวลาที่ต้องการส่งอีเมล์โดยหาความแตกต่างของเวลาปัจจุบันกับ ScheduleDate
+            const millisecondsUntilScheduledTime = scheduleDate.getTime() - Date.now();
+            setTimeout(async () => {
+                // ส่งอีเมล์ที่นี่
+                const info = await transport.sendMail({
+                    from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
+                    to: user.Email,
+                    // to: `theerwat@gmail.com`,
+                    subject: user.Firstname,
+                    text: `Sender is: ${user.Username}`,
+                    html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
+                <div style=3D"color: yellow; text-align: center;" >
+                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
+                </div>
+                <div style=3D"display: flex; text-align: center;" >
+                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${body.Tel}</h5>
+                    <h5 style="margin-right: 10%;">Option is: ${body.Option}</h5>
+                    <h5 style="margin-right: 10%;">Result is: ${body.Result}</h5>
+                    <h5 style="margin-right: 10%;">Contact is: ${body.Contact}</h5>
+                    <h5 style="margin-right: 10%;">ScheduleDate is: ${scheduleDate}</h5>
+                    <h5>Description is: ${body.Description}</h5>
+                </div>
+                <h6>Message is: ${body.Message}</h6>
+                </div>`,
+                });
+
+                // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
+                return res
+                    .status(201)
+                    .json({ Management, Message: 'Messages created and email scheduled successfully' });
+            }, millisecondsUntilScheduledTime);
+        } else {
+            // ถ้า ScheduleDate ไม่ได้ระบุ
+            // ส่งอีเมล์ทันที
+            const info = await transport.sendMail({
+                from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
+                to: user.Email,
+                // to: `theerwat@gmail.com`,
+                subject: user.Firstname,
+                text: `Sender is: ${user.Username}`,
+                html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
+                <div style=3D"color: yellow; text-align: center;" >
+                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
+                </div>
+                <div style=3D"display: flex; text-align: center;" >
+                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${body.Tel}</h5>
+                    <h5 style="margin-right: 10%;">Option is: ${body.Option}</h5>
+                    <h5 style="margin-right: 10%;">Result is: ${body.Result}</h5>
+                    <h5 style="margin-right: 10%;">Contact is: ${body.Contact}</h5>
+                    <h5 style="margin-right: 10%;">ScheduleDate is: ${scheduleDate}</h5>
+                    <h5>Description is: ${body.Description}</h5>
+                </div>
+                <h6>Message is: ${body.Message}</h6>
+                </div>`,
+            });
+
+            // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
+            return res.status(201).json({ Management, Message: 'Messages created and email sent successfully' });
+        }
     });
 };
 
