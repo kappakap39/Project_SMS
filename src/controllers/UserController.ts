@@ -257,7 +257,9 @@ const updateUser: RequestHandler = async (req, res) => {
     }
 
     if (body.Password) {
-        payload['Password'] = body.Password;
+        // ใช้ Bcrypt เพื่อแฮชรหัสผ่าน
+        const hashedPassword = await bcrypt.hash( body.Password, 10);
+        payload['Password'] = hashedPassword;
     }
 
     if (body.Userlevel) {

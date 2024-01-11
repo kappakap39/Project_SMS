@@ -129,7 +129,6 @@ const addUser: RequestHandler = async (req, res) => {
     const prisma = new PrismaClient();
 
     try {
-
         const duplicateUser = await prisma.userManagement.findMany({
             where: {
                 OR: [{ Email: { contains: validatedData.Email } }],
@@ -277,14 +276,13 @@ const updateUser: RequestHandler = async (req, res) => {
             return res.status(422).json({ error: 'checkUser not found' });
         }
 
-        // ใช้ Bcrypt เพื่อแฮชรหัสผ่าน
-        const hashedPassword = await bcrypt.hash( body.Password, 10);
-
         //!Tab1
         if (body.Username) {
             payload['Username'] = body.Username;
         }
         if (body.Password) {
+            // ใช้ Bcrypt เพื่อแฮชรหัสผ่าน
+            const hashedPassword = await bcrypt.hash(body.Password, 10);
             payload['Password'] = hashedPassword;
         }
         if (body.Userlevel) {
