@@ -1,5 +1,6 @@
 import express from 'express';
-import { getUser, addUser, updateUser, deleteUser, getUserByID, searchUsers } from '../controllers/UserController';
+import { getUser, addUser, updateUser, deleteUser, getUserByID } from '../controllers/UserController';
+import { searchUsers } from '../controllers/Search';
 
 const root = express.Router();
 

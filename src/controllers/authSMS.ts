@@ -114,33 +114,64 @@ const sentSMS: RequestHandler = async (req, res, next) => {
                 data: payloadMessage,
             });
         }
+        if(scheduleDate){
+            // - 7 hours to scheduleDate เพื่อเก็บการส่งเป็นเวลาโกบอล
+            scheduleDate.setHours(scheduleDate.getHours() - 7);
+            if (!isPast(scheduleDate)) {
+                // !isPast(scheduleDate) ไม่ใช่อดีต
+    
+                
+                // ถ้า ScheduleDate ถูกกำหนดและไม่ได้อยู่ในอดีต
+                // คำนวณเวลาที่ต้องการส่งอีเมล์โดยหาความแตกต่างของเวลาปัจจุบันกับ ScheduleDate
+                const millisecondsUntilScheduledTime = scheduleDate.getTime() - Date.now();
+    
+                // ประกาศ Timezone ที่ต้องการใช้
+                // const timeZoneOffsetInHours = 7; // UTC+7 for Bangkok
+                // แปลง scheduleDate เป็นเวลาใน timezone ที่ต้องการ
+                // const scheduleDateInLocalTimezone = addHours(scheduleDate, timeZoneOffsetInHours);
+                // สร้าง string ที่แสดงเวลาในรูปแบบที่ต้องการ (เช่น "วันที่ 1 มกราคม 2565 เวลา 10:00 น.")
+                // const formattedScheduleDate = format(scheduleDateInLocalTimezone, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
+                //     locale: th,
+                // });
+                const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
+                // const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
+                //     locale: th,
+                // });
+    
+                setTimeout(async () => {
+                    // ส่งอีเมล์ที่นี่
+                    const info = await transport.sendMail({
+                        from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
+                        to: user.Email,
+                        subject: user.Firstname,
+                        text: `Sender is: ${user.Username}`,
+                        html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
+                    <div style=3D"color: yellow; text-align: center;" >
+                        <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
+                    </div>
+                    <div style=3D"display: flex; text-align: center;" >
+                        <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${body.Tel}</h5>
+                        <h5 style="margin-right: 10%;">Option is: ${body.Option}</h5>
+                        <h5 style="margin-right: 10%;">Result is: ${body.Result}</h5>
+                        <h5 style="margin-right: 10%;">Contact is: ${body.Contact}</h5>
+                        <h5 style="margin-right: 10%;">Date time thai is: ${formattedScheduleDate}</h5>
+                        <h5>Description is: ${body.Description}</h5>
+                    </div>
+                    <h6>Message is: ${body.Message}</h6>
+                    </div>`,
+                    });
+                }, millisecondsUntilScheduledTime);
+                // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
+                return res.status(201).json({ Management, Message: 'Messages created and email scheduled successfully time future' });
+            }
 
-        if (scheduleDate && !isPast(scheduleDate)) {
-            // !isPast(scheduleDate) ไม่ใช่อดีต
-            // ถ้า ScheduleDate ถูกกำหนดและไม่ได้อยู่ในอดีต
-            // คำนวณเวลาที่ต้องการส่งอีเมล์โดยหาความแตกต่างของเวลาปัจจุบันกับ ScheduleDate
-            const millisecondsUntilScheduledTime = scheduleDate.getTime() - Date.now();
-
-            // ประกาศ Timezone ที่ต้องการใช้
-            // const timeZoneOffsetInHours = 7; // UTC+7 for Bangkok
-            // แปลง scheduleDate เป็นเวลาใน timezone ที่ต้องการ
-            // const scheduleDateInLocalTimezone = addHours(scheduleDate, timeZoneOffsetInHours);
-            // สร้าง string ที่แสดงเวลาในรูปแบบที่ต้องการ (เช่น "วันที่ 1 มกราคม 2565 เวลา 10:00 น.")
-            // const formattedScheduleDate = format(scheduleDateInLocalTimezone, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
-            //     locale: th,
-            // });
-            const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
-                locale: th,
-            });
-
-            setTimeout(async () => {
-                // ส่งอีเมล์ที่นี่
-                const info = await transport.sendMail({
-                    from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-                    to: user.Email,
-                    subject: user.Firstname,
-                    text: `Sender is: ${user.Username}`,
-                    html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
+            // ส่งอีเมล์ทันที
+            const info = await transport.sendMail({
+                from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
+                to: user.Email,
+                subject: user.Firstname,
+                text: `Sender is: ${user.Username}`,
+                html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
                 <div style=3D"color: yellow; text-align: center;" >
                     <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
                 </div>
@@ -149,29 +180,26 @@ const sentSMS: RequestHandler = async (req, res, next) => {
                     <h5 style="margin-right: 10%;">Option is: ${body.Option}</h5>
                     <h5 style="margin-right: 10%;">Result is: ${body.Result}</h5>
                     <h5 style="margin-right: 10%;">Contact is: ${body.Contact}</h5>
-                    <h5 style="margin-right: 10%;">ScheduleDate is: ${scheduleDate}</h5>
-                    <h5 style="margin-right: 10%;">Date time thai is: ${formattedScheduleDate}</h5>
                     <h5>Description is: ${body.Description}</h5>
                 </div>
                 <h6>Message is: ${body.Message}</h6>
                 </div>`,
-                });
-            }, millisecondsUntilScheduledTime);
+            });
             // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
-            return res.status(201).json({ Management, Message: 'Messages created and email scheduled successfully' });
+            return res.status(201).json({ Management, Message: 'Messages created and email sent successfully time past' });
+
         } else {
             if (scheduleDate && isPast(scheduleDate)) {
-                const scheduleDateInLocalTimezone = addHours(scheduleDate, 7);
+                // const scheduleDateInLocalTimezone = addHours(scheduleDate, 7);
                 // สร้าง string ที่แสดงเวลาในรูปแบบที่ต้องการ (เช่น "วันที่ 1 มกราคม 2565 เวลา 10:00 น.")
                 const formattedScheduleDate = format(
-                    scheduleDateInLocalTimezone,
+                    scheduleDate,
                     "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'",
                     {
                         locale: th,
                     },
                 );
-                console.log('Scheduled time is in the past', scheduleDate);
-                console.log('scheduleDateInLocalTimezone', scheduleDateInLocalTimezone);
+                console.log('Scheduled time is in the past', formattedScheduleDate);
                 // return res.status(400).json({ error: 'Scheduled time is in the past' });
             }
 
@@ -191,14 +219,13 @@ const sentSMS: RequestHandler = async (req, res, next) => {
                     <h5 style="margin-right: 10%;">Option is: ${body.Option}</h5>
                     <h5 style="margin-right: 10%;">Result is: ${body.Result}</h5>
                     <h5 style="margin-right: 10%;">Contact is: ${body.Contact}</h5>
-                    <h5 style="margin-right: 10%;">ScheduleDate is null: ${scheduleDate}</h5>
                     <h5>Description is: ${body.Description}</h5>
                 </div>
                 <h6>Message is: ${body.Message}</h6>
                 </div>`,
             });
             // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
-            return res.status(201).json({ Management, Message: 'Messages created and email sent successfully' });
+            return res.status(201).json({ Management, Message: 'Messages created and email sent successfully time current' });
         }
     });
 };
