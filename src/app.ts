@@ -8,6 +8,7 @@ import fourOhFour from './middleware/fourOhFour';
 import User from './routes/UserManagement';
 import Token from './routes/Login';
 import sms from './routes/SMS';
+import search from './routes/Search';
 import multer from 'multer';
 
 //! AE router
@@ -32,6 +33,7 @@ app.use('/authUser', User );
 app.use('/user', user );
 app.use('/Token', Token);
 app.use('/sms', sms);
+app.use('/search', search);
 // app.use('/', test);
 
 
