@@ -7,7 +7,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 const expirationTime = process.env.EXPIRATION_TIME;
 
-import { isPast, parseISO, format, addHours } from 'date-fns';
+import { isPast, parseISO, format, addHours, isValid, startOfDay, addDays } from 'date-fns';
 import { th } from 'date-fns/locale/th';
 
 //! sentSms
@@ -114,17 +114,16 @@ const sentSMS: RequestHandler = async (req, res, next) => {
                 data: payloadMessage,
             });
         }
-        if(scheduleDate){
+        if (scheduleDate) {
             // - 7 hours to scheduleDate เพื่อเก็บการส่งเป็นเวลาโกบอล
             scheduleDate.setHours(scheduleDate.getHours() - 7);
             if (!isPast(scheduleDate)) {
                 // !isPast(scheduleDate) ไม่ใช่อดีต
-    
-                
+
                 // ถ้า ScheduleDate ถูกกำหนดและไม่ได้อยู่ในอดีต
                 // คำนวณเวลาที่ต้องการส่งอีเมล์โดยหาความแตกต่างของเวลาปัจจุบันกับ ScheduleDate
                 const millisecondsUntilScheduledTime = scheduleDate.getTime() - Date.now();
-    
+
                 // ประกาศ Timezone ที่ต้องการใช้
                 // const timeZoneOffsetInHours = 7; // UTC+7 for Bangkok
                 // แปลง scheduleDate เป็นเวลาใน timezone ที่ต้องการ
@@ -137,7 +136,7 @@ const sentSMS: RequestHandler = async (req, res, next) => {
                 // const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
                 //     locale: th,
                 // });
-    
+
                 setTimeout(async () => {
                     // ส่งอีเมล์ที่นี่
                     const info = await transport.sendMail({
@@ -162,7 +161,9 @@ const sentSMS: RequestHandler = async (req, res, next) => {
                     });
                 }, millisecondsUntilScheduledTime);
                 // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
-                return res.status(201).json({ Management, Message: 'Messages created and email scheduled successfully time future' });
+                return res
+                    .status(201)
+                    .json({ Management, Message: 'Messages created and email scheduled successfully time future' });
             }
 
             // ส่งอีเมล์ทันที
@@ -186,19 +187,16 @@ const sentSMS: RequestHandler = async (req, res, next) => {
                 </div>`,
             });
             // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
-            return res.status(201).json({ Management, Message: 'Messages created and email sent successfully time past' });
-
+            return res
+                .status(201)
+                .json({ Management, Message: 'Messages created and email sent successfully time past' });
         } else {
             if (scheduleDate && isPast(scheduleDate)) {
                 // const scheduleDateInLocalTimezone = addHours(scheduleDate, 7);
                 // สร้าง string ที่แสดงเวลาในรูปแบบที่ต้องการ (เช่น "วันที่ 1 มกราคม 2565 เวลา 10:00 น.")
-                const formattedScheduleDate = format(
-                    scheduleDate,
-                    "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'",
-                    {
-                        locale: th,
-                    },
-                );
+                const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
+                    locale: th,
+                });
                 console.log('Scheduled time is in the past', formattedScheduleDate);
                 // return res.status(400).json({ error: 'Scheduled time is in the past' });
             }
@@ -225,7 +223,9 @@ const sentSMS: RequestHandler = async (req, res, next) => {
                 </div>`,
             });
             // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
-            return res.status(201).json({ Management, Message: 'Messages created and email sent successfully time current' });
+            return res
+                .status(201)
+                .json({ Management, Message: 'Messages created and email sent successfully time current' });
         }
     });
 };
@@ -302,4 +302,33 @@ const getSMSWithMessages: RequestHandler = async (req, res) => {
     }
 };
 
-export { sentSMS, getSMSByID, getSMSWithMessages };
+const getSMSByUserID: RequestHandler = async (req, res) => {
+    try {
+        const { UserID }: any = req.query;
+
+        let smsSearchResults;
+
+        if (UserID) {
+            // Search for SMSManagement data by UserID
+            smsSearchResults = await prisma.sMSManagement.findMany({
+                where: {
+                    UserID: UserID,
+                },
+                orderBy: { CreatedAt: 'desc' },
+            });
+        } else {
+            // If no UserID provided, retrieve all SMSManagement data
+            smsSearchResults = await prisma.sMSManagement.findMany({
+                orderBy: { CreatedAt: 'desc' },
+            });
+        }
+
+        // Combine and send the results
+        res.status(200).json({ smsResults: smsSearchResults });
+    } catch (error) {
+        console.error('Error during search:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+export { sentSMS, getSMSByID, getSMSWithMessages, getSMSByUserID };

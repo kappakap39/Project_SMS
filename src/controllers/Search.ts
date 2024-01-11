@@ -225,6 +225,7 @@ const searchSMSUser: RequestHandler = async (req, res) => {
                             Username: true,
                             Firstname: true,
                             Lastname: true,
+                            Abbreviatename: true,
                         },
                     },
                 },
