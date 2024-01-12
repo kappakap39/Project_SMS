@@ -1,6 +1,6 @@
 import express from 'express';
 import { getSMSByID, getSMSWithMessages, getSMSByUserID } from '../controllers/authSMS';
-import { sentSMSCreate, addSMS, sentMail, } from '../controllers/Sentmail';
+import { sentSMSCreate, addSMS, sentMail, updateSMS, deleteSMS } from '../controllers/Sentmail';
 import { authToken } from '../middleware/authUser';
 const root = express.Router();
 
@@ -10,5 +10,7 @@ root.post('/sentMail', authToken, sentMail);
 root.get('/getSMSByID', getSMSByID);
 root.get('/getSMSWithMessages', getSMSWithMessages);
 root.get('/getSMSByUserID', getSMSByUserID);
+root.patch('/updateSMS', updateSMS);
+root.delete('/deleteSMS', deleteSMS);
 
 export default root;

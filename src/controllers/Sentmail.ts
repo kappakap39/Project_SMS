@@ -486,4 +486,157 @@ const sentMail: RequestHandler = async (req, res, next) => {
     }
 };
 
-export { sentSMSCreate, sentMail, addSMS };
+//! update
+const updateSMS: RequestHandler = async (req, res) => {
+    //todo1: Token
+    const SECRET_KEY = process.env.SECRET_KEY || 'default_secret_key';
+    const token = req.headers.authorization?.split(' ')[1];
+    console.log('Token ', token);
+    if (!token) {
+        return res.status(403).json({ error: 'Token not found' });
+    }
+    // ให้ถือว่า Token ถูกต้องเพื่อให้ได้ decodedToken
+    const decodedToken = jwt.verify(token, SECRET_KEY) as { UserID: string };
+    if (!decodedToken.UserID) {
+        return res.status(403).json({ error: 'decodedToken not found' });
+    }
+    console.log('decodedToken: ', decodedToken);
+
+    //todo2: Check user
+    // ค้นหาข้อมูลผู้ใช้จากฐานข้อมูล
+    const user = await prisma.userManagement.findUnique({
+        where: {
+            UserID: decodedToken.UserID,
+        },
+    });
+    if (!user) {
+        return res.status(403).json({ error: 'None User' });
+    }
+
+    // todo 3 :  validate
+
+    const body = req.body;
+
+    const payload: any = {};
+
+    // todo 4 : add data to payload
+    if (decodedToken.UserID) {
+        payload['UserID'] = decodedToken.UserID;
+    }
+
+    if (body.Sender) {
+        payload['Sender'] = body.Sender;
+    }
+
+    if (body.Tel) {
+        payload['Tel'] = body.Tel;
+    }
+
+    if (body.Result) {
+        payload['Result'] = body.Result;
+    }
+
+    if (body.Contact) {
+        payload['Contact'] = body.Contact;
+    }
+
+    if (body.ScheduleDate) {
+        payload['ScheduleDate'] = body.ScheduleDate;
+    }
+
+    if (body.Option) {
+        payload['Option'] = body.Option;
+    }
+
+    if (body.Description) {
+        payload['Description'] = body.Description;
+    }
+
+    // todo 5 : save to database
+
+    const updatedSMSManagement = await prisma.sMSManagement.update({
+        where: {
+            SMS_ID: body.SMS_ID,
+        },
+        data: {
+            ...payload,
+            // ลบข้อมูล SMSMessage ที่เชื่อมโยงกับ SMSManagement
+            smsMessage: {
+                deleteMany: {
+                    SMS_ID: body.SMS_ID,
+                },
+            },
+        },
+    });
+    // ตัดข้อความเป็นชุดๆ ขนาด 140 ตัวอักษร
+    const splitRow = body.Message.match(/.{1,140}/g);
+    const createdMessages = [];
+
+    // วนลูปเพื่อบันทึกข้อความที่ถูกตัดลงในฐานข้อมูล
+    for (let i = 0; i < splitRow.length; i++) {
+        const payloadMessage: any = {
+            SMS_ID: updatedSMSManagement.SMS_ID,
+            Message: splitRow[i], // ใช้ชุดข้อความที่ถูกตัดแล้วในแต่ละรอบของลูป
+        };
+
+        createdMessages.push(payloadMessage);
+
+        // บันทึกข้อมูล SMSMessage ใหม่
+        await prisma.sMSMessage.create({
+            data: payloadMessage,
+        });
+    }
+
+    console.log('อัปเดต', updatedSMSManagement);
+    console.log('payload', payload);
+    console.log('payload', createdMessages);
+
+    return res.json({ updatedSMSManagement, createdMessages });
+};
+
+//! deleteSMS
+const deleteSMS: RequestHandler = async (req, res) => {
+    const schema = Joi.object({
+        SMS_ID: Joi.string().uuid().required(),
+    });
+
+    const options = {
+        abortEarly: false,
+        allowUnknown: true,
+        stripUnknown: true,
+    };
+
+    const { error } = schema.validate(req.query, options);
+
+    if (error) {
+        return res.status(422).json({
+            status: 422,
+            message: 'Unprocessable Entity',
+            data: error.details,
+        });
+    }
+
+    const query: any = req.query;
+
+    const identifer = await prisma.sMSManagement.findFirst({
+        where: {
+            SMS_ID: query.SMS_ID,
+        },
+    });
+
+    if (identifer === null || identifer === undefined) {
+        return res.status(422).json({
+            status: 422,
+            message: 'User not found',
+        });
+    }
+
+    const deleteSMS = await prisma.sMSManagement.delete({
+        where: {
+            SMS_ID: query.SMS_ID,
+        },
+    });
+    return res.json(deleteSMS);
+};
+
+export { sentSMSCreate, sentMail, addSMS, updateSMS, deleteSMS };
