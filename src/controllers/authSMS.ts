@@ -289,26 +289,6 @@ const addSMS: RequestHandler = async (req, res, next) => {
     if (!user) {
         return res.status(403).json({ error: 'None User' });
     }
-    //! กำหนดค่าการกำหนดค่าสำหรับ Nodemailer
-    const transport = nodemailer.createTransport({
-        host: 'sandbox.smtp.mailtrap.io',
-        port: 2525,
-        auth: {
-            user: 'eb96c9bf8c2ce8',
-            pass: 'cfb075837bf7c1',
-        },
-    });
-
-    // เพิ่มการตรวจสอบขีดจำกัดของอีเมล์และเตือน
-    transport.verify(function (error, success) {
-        if (error) {
-            console.error('Mailtrap connection error:', error);
-            return res.status(201).json({ 'Mailtrap connection error:': error });
-        } else {
-            console.log('Mailtrap connection successful');
-        }
-    });
-
     // create schema object
     const schema = Joi.object({
         UserID: Joi.string(),
