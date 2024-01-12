@@ -72,12 +72,10 @@ const searchSMS: RequestHandler = async (req, res) => {
                 { Contact: { contains: query.toLowerCase() } },
                 { Option: { contains: query.toLowerCase() } },
                 { Description: { contains: query.toLowerCase() } },
-                { ScheduleDate: { equals: dateQuery } }
-            ]
+                { ScheduleDate: { equals: dateQuery } },
+            ],
         };
-
-        // Search for SMSManagement data
-        const smsSearchResults = await prisma.sMSManagement.findMany({
+        const smsSearchResults: any = await prisma.sMSManagement.findMany({
             where: smsSearchConditions,
             orderBy: { CreatedAt: 'desc' },
             include: {
@@ -86,14 +84,34 @@ const searchSMS: RequestHandler = async (req, res) => {
                         Username: true,
                         Firstname: true,
                         Lastname: true,
-                        Abbreviatename: true,
+                    },
+                },
+                smsMessage: {
+                    select: {
+                        Message: true,
                     },
                 },
             },
         });
-
-        // Combine and send the results
-        res.status(200).json({ smsResults: smsSearchResults });
+        const smsMessagesBySMSID: { [key: string]: string[] } = {};
+        for (const sms of smsSearchResults) {
+            const smsID = sms.SMS_ID;
+            if (sms.smsMessage) {
+                if (!smsMessagesBySMSID[smsID]) {
+                    smsMessagesBySMSID[smsID] = sms.smsMessage.map((m: any) => m.Message);
+                } else {
+                    smsMessagesBySMSID[smsID].push(sms.smsMessage.map((m: any) => m.Message));
+                }
+            }
+        }
+        const enhancedSMSResults = smsSearchResults.map((sms: any) => {
+            const { smsMessage, ...rest } = sms;
+            return {
+                ...rest,
+                Messages: smsMessagesBySMSID[sms.SMS_ID] ? smsMessagesBySMSID[sms.SMS_ID].join('') : '', // รวม Messages เป็นข้อความเดียวกัน
+            };
+        });        
+        res.status(200).json({ enhancedSMSResults });
     } catch (error) {
         console.error('Error during search:', error);
         res.status(500).json({ error: 'Internal Server Error' });
