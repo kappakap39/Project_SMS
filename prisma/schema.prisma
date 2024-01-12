@@ -98,7 +98,7 @@ model SMSMessage {
   CreatedAt DateTime @default(now())
   UpdatedAt DateTime @updatedAt
 
-  smsManagement SMSManagement @relation(name: "Messages", fields: [SMS_ID], references: [SMS_ID])
+  smsManagement SMSManagement @relation(name: "Messages", fields: [SMS_ID], references: [SMS_ID] , onDelete: Cascade)
 }
 
 model TokenUser {
