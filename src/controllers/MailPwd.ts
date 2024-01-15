@@ -51,8 +51,8 @@ const SentMailPwd: RequestHandler = async (req, res, next) => {
             host: 'sandbox.smtp.mailtrap.io',
             port: 2525,
             auth: {
-                user: 'eb96c9bf8c2ce8',
-                pass: 'cfb075837bf7c1',
+                user: 'b0147891f258c2',
+                pass: '4ff23679f73610',
             },
         });
         // เพิ่มการตรวจสอบขีดจำกัดของอีเมล์และเตือน

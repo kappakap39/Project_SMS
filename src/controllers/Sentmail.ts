@@ -41,8 +41,8 @@ const sentSMSCreate: RequestHandler = async (req, res, next) => {
         host: 'sandbox.smtp.mailtrap.io',
         port: 2525,
         auth: {
-            user: 'eb96c9bf8c2ce8',
-            pass: 'cfb075837bf7c1',
+            user: 'b0147891f258c2',
+            pass: '4ff23679f73610',
         },
     });
 
@@ -258,8 +258,8 @@ const sentMail: RequestHandler = async (req, res, next) => {
         host: 'sandbox.smtp.mailtrap.io',
         port: 2525,
         auth: {
-            user: 'eb96c9bf8c2ce8',
-            pass: 'cfb075837bf7c1',
+            user: 'b0147891f258c2',
+            pass: '4ff23679f73610',
         },
     });
 
@@ -322,9 +322,7 @@ const sentMail: RequestHandler = async (req, res, next) => {
                     </div>`,
                 });
             }, millisecondsUntilScheduledTime);
-            return res
-                    .status(201)
-                    .json({ Message: 'Messages created and email scheduled successfully for future' });
+            return res.status(201).json({ Message: 'Messages created and email scheduled successfully for future' });
         } else {
             // กำหนดเวลาที่ผ่านมาหรือไม่ได้ระบุ
             // ส่งอีเมล์ทันที
@@ -348,9 +346,7 @@ const sentMail: RequestHandler = async (req, res, next) => {
                 <h6>Message is: ${combinedMessageData}</h6>
                 </div>`,
             });
-            return res
-                .status(201)
-                .json({ info, Message: 'Messages created and email sent successfully for past' });
+            return res.status(201).json({ info, Message: 'Messages created and email sent successfully for past' });
         }
     } else {
         // ส่งอีเมล์ทันที
@@ -374,9 +370,7 @@ const sentMail: RequestHandler = async (req, res, next) => {
             <h6>Message is: ${combinedMessageData}</h6>
             </div>`,
         });
-        return res
-            .status(201)
-            .json({ info, Message: 'Messages created and email sent successfully for immediate' });
+        return res.status(201).json({ info, Message: 'Messages created and email sent successfully for immediate' });
     }
 };
 
@@ -407,8 +401,8 @@ const sentMail140: RequestHandler = async (req, res, next) => {
         host: 'sandbox.smtp.mailtrap.io',
         port: 2525,
         auth: {
-            user: 'eb96c9bf8c2ce8',
-            pass: 'cfb075837bf7c1',
+            user: 'b0147891f258c2',
+            pass: '4ff23679f73610',
         },
     });
 
@@ -542,5 +536,4 @@ const sentMail140: RequestHandler = async (req, res, next) => {
     }
 };
 
-
-export { sentSMSCreate, sentMail, sentMail140,  };
+export { sentSMSCreate, sentMail, sentMail140 };
