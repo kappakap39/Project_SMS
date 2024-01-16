@@ -9,6 +9,7 @@ const expirationTime = process.env.EXPIRATION_TIME;
 
 import { isPast, parseISO, format, addHours, isValid, startOfDay, addDays } from 'date-fns';
 import { th } from 'date-fns/locale/th';
+import dayjs from 'dayjs';
 
 //!Get User and admin By ID
 const getSMSByID: RequestHandler = async (req, res) => {
@@ -269,11 +270,16 @@ const addSMS: RequestHandler = async (req, res, next) => {
     const SECRET_KEY = process.env.SECRET_KEY || 'default_secret_key';
     const token = req.headers.authorization?.split(' ')[1];
     console.log('Token ', token);
+    
+    // ตรวจสอบว่ามี Token หรือไม่
     if (!token) {
         return res.status(403).json({ error: 'Token not found' });
     }
-    // ให้ถือว่า Token ถูกต้องเพื่อให้ได้ decodedToken
+    
+    // ถอดรหัส Token เพื่อให้ได้ decodedToken
     const decodedToken = jwt.verify(token, SECRET_KEY) as { UserID: string };
+    
+    // ถ้าไม่พบ decodedToken
     if (!decodedToken.UserID) {
         return res.status(403).json({ error: 'decodedToken not found' });
     }
@@ -286,10 +292,13 @@ const addSMS: RequestHandler = async (req, res, next) => {
             UserID: decodedToken.UserID,
         },
     });
+    
+    // ถ้าไม่พบผู้ใช้
     if (!user) {
         return res.status(403).json({ error: 'None User' });
     }
-    // create schema object
+
+    // สร้าง schema สำหรับ validation ข้อมูล
     const schema = Joi.object({
         UserID: Joi.string(),
         SMS_ID: Joi.string(),
@@ -302,22 +311,28 @@ const addSMS: RequestHandler = async (req, res, next) => {
         Description: Joi.string(),
         Message: Joi.string(),
     });
+
     const options = {
         abortEarly: false, // include all errors
         allowUnknown: true, // ignore unknown props
         stripUnknown: true, // remove unknown props
     };
+
+    // ทำการ validate ข้อมูลที่ส่งมาใน request body
     const { error } = schema.validate(req.body, options);
 
     if (error) {
+        // ถ้ามี error ในการ validate ให้ส่ง response กลับไปที่ client
         return res.status(422).json({
             status: 422,
             message: 'Unprocessable Entity',
             data: error.details,
         });
     }
+
     const body = req.body;
-    const scheduleDate = body.ScheduleDate ? parseISO(body.ScheduleDate) : null;
+    const scheduleDate = body.ScheduleDate ? dayjs(body.ScheduleDate) : null;
+
     return await prisma.$transaction(async function (tx) {
         const payload: any = {
             UserID: decodedToken.UserID,
@@ -329,6 +344,8 @@ const addSMS: RequestHandler = async (req, res, next) => {
             Option: body.Option,
             Description: body.Description,
         };
+        
+        // สร้างข้อมูล SMSManagement ใน transaction
         const Management = await tx.sMSManagement.create({
             data: payload,
         });
@@ -341,13 +358,17 @@ const addSMS: RequestHandler = async (req, res, next) => {
                 SMS_ID: Management.SMS_ID,
                 Message: splitRow[i], // ใช้ชุดข้อความที่ถูกตัดแล้วในแต่ละรอบของลูป
             };
+            
+            // สร้างข้อมูล SMSMessage ใน transaction
             await tx.sMSMessage.create({
                 data: payloadMessage,
             });
         }
-        // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
+        
+        // ส่งคำตอบเมื่อสร้างข้อมูล SMSManagement และ SMSMessage เสร็จสมบูรณ์
         return res.status(201).json({ Management, Message: 'Messages created successfully' });
     });
 };
+
 
 export { getSMSByID, getSMSWithMessages, getSMSByUserID, addSMS, updateSMS, deleteSMS };
