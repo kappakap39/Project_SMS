@@ -44,4 +44,13 @@ function generateOTP() {
     return otp.toString();
 }
 
-export { handleTokenExpiration, generateOTP };
+function chunkArray(arr: any[], batchSize: number) {
+    const result = [];
+    for (let i = 0; i < arr.length; i += batchSize) {
+        const batch = arr.slice(i, i + batchSize);
+        result.push(batch);
+    }
+    return result;
+}
+
+export { handleTokenExpiration, generateOTP, chunkArray };

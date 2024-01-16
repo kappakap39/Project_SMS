@@ -9,7 +9,7 @@ import User from './routes/UserManagement';
 import Token from './routes/Login';
 import sms from './routes/SMS';
 import search from './routes/Search';
-import multer from 'multer';
+import test from './tests/Router';
 
 //! AE router
 import user from './routes/user';
@@ -34,7 +34,9 @@ app.use('/user', user );
 app.use('/Token', Token);
 app.use('/sms', sms);
 app.use('/search', search);
-// app.use('/', test);
+
+//!/api test
+app.use('/test', test);
 
 
 // Apply error handling last
