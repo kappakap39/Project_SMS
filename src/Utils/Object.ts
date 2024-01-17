@@ -53,4 +53,30 @@ function chunkArray(arr: any[], batchSize: number) {
     return result;
 }
 
-export { handleTokenExpiration, generateOTP, chunkArray };
+const createEmailHtmlContent = (user: any, sms: any, message: string) => {
+    return `
+        <div style="background-color: red; color: #fff; font-family: Arial, sans-serif; padding: 20px;">
+            <div style="text-align: center; padding-bottom: 20px;">
+                <h2 style="color: #ffcc00;">Sent Mail to ${user.Firstname} ${user.Lastname}</h2>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; padding-bottom: 10px;">
+                <div style="flex-basis: 48%;">
+                    <h4>Tel: ${user.Tel} or ${sms.Tel}</h4>
+                    <h4>Option: ${sms.Option}</h4>
+                    <h4>Result: ${sms.Result}</h4>
+                    <h4>Contact: ${sms.Contact}</h4>
+                </div>
+                <div style="flex-basis: 48%; text-align: right;">
+                    <h4>Description: ${sms.Description}</h4>
+                </div>
+            </div>
+            <hr style="border: 1px solid #555; margin: 20px 0;">
+            <div>
+                <h3>Message:</h3>
+                <p>${message}</p>
+            </div>
+        </div>
+    `;
+};
+
+export { handleTokenExpiration, generateOTP, chunkArray, createEmailHtmlContent };

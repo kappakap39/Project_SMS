@@ -6,27 +6,11 @@ import prisma from '../lib/db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 const expirationTime = process.env.EXPIRATION_TIME;
-
+import { createEmailHtmlContent } from '../Utils/Object';
 import { isPast, parseISO, format, addHours, isValid, startOfDay, addDays } from 'date-fns';
 import { th } from 'date-fns/locale/th';
 import dayjs from 'dayjs';
-
-// const transport = nodemailer.createTransport({
-//     host: 'sandbox.smtp.mailtrap.io',
-//     port: 2525,
-//     auth: {
-//         user: 'b0147891f258c2',
-//         pass: '4ff23679f73610',
-//     },
-// });
-function chunkArray(arr: any[], batchSize: number) {
-    const result = [];
-    for (let i = 0; i < arr.length; i += batchSize) {
-        const batch = arr.slice(i, i + batchSize);
-        result.push(batch);
-    }
-    return result;
-}
+let data: any, sms: any, user: any;
 
 //! sentSMS and Create
 const sentSMSCreate: RequestHandler = async (req, res, next) => {
@@ -141,7 +125,7 @@ const sentSMSCreate: RequestHandler = async (req, res, next) => {
                 // ถ้า ScheduleDate ถูกกำหนดและไม่ได้อยู่ในอดีต
                 // คำนวณเวลาที่ต้องการส่งอีเมล์โดยหาความแตกต่างของเวลาปัจจุบันกับ ScheduleDate
                 const millisecondsUntilScheduledTime = scheduleDate.getTime() - Date.now();
-
+                const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                 // ประกาศ Timezone ที่ต้องการใช้
                 // const timeZoneOffsetInHours = 7; // UTC+7 for Bangkok
                 // แปลง scheduleDate เป็นเวลาใน timezone ที่ต้องการ
@@ -162,20 +146,7 @@ const sentSMSCreate: RequestHandler = async (req, res, next) => {
                         to: user.Email,
                         subject: user.Firstname,
                         text: `Sender is: ${user.Username}`,
-                        html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                    <div style=3D"color: yellow; text-align: center;" >
-                        <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                    </div>
-                    <div style=3D"display: flex; text-align: center;" >
-                        <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${body.Tel}</h5>
-                        <h5 style="margin-right: 10%;">Option is: ${body.Option}</h5>
-                        <h5 style="margin-right: 10%;">Result is: ${body.Result}</h5>
-                        <h5 style="margin-right: 10%;">Contact is: ${body.Contact}</h5>
-                        <h5 style="margin-right: 10%;">Date time thai is: ${formattedScheduleDate}</h5>
-                        <h5>Description is: ${body.Description}</h5>
-                    </div>
-                    <h6>Message is: ${body.Message}</h6>
-                    </div>`,
+                        html: emailHtmlContent,
                     });
                 }, millisecondsUntilScheduledTime);
                 // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
@@ -183,6 +154,7 @@ const sentSMSCreate: RequestHandler = async (req, res, next) => {
                     .status(201)
                     .json({ Management, Message: 'Messages created and email scheduled successfully time future' });
             }
+            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
 
             // ส่งอีเมล์ทันที
             const info = await transport.sendMail({
@@ -190,19 +162,7 @@ const sentSMSCreate: RequestHandler = async (req, res, next) => {
                 to: user.Email,
                 subject: user.Firstname,
                 text: `Sender is: ${user.Username}`,
-                html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                <div style=3D"color: yellow; text-align: center;" >
-                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                </div>
-                <div style=3D"display: flex; text-align: center;" >
-                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${body.Tel}</h5>
-                    <h5 style="margin-right: 10%;">Option is: ${body.Option}</h5>
-                    <h5 style="margin-right: 10%;">Result is: ${body.Result}</h5>
-                    <h5 style="margin-right: 10%;">Contact is: ${body.Contact}</h5>
-                    <h5>Description is: ${body.Description}</h5>
-                </div>
-                <h6>Message is: ${body.Message}</h6>
-                </div>`,
+                html: emailHtmlContent,
             });
             // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
             return res
@@ -218,6 +178,7 @@ const sentSMSCreate: RequestHandler = async (req, res, next) => {
                 console.log('Scheduled time is in the past', formattedScheduleDate);
                 // return res.status(400).json({ error: 'Scheduled time is in the past' });
             }
+            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
 
             // ถ้า ScheduleDate ไม่ได้ระบุ
             // ส่งอีเมล์ทันที
@@ -226,19 +187,7 @@ const sentSMSCreate: RequestHandler = async (req, res, next) => {
                 to: user.Email,
                 subject: user.Firstname,
                 text: `Sender is: ${user.Username}`,
-                html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                <div style=3D"color: yellow; text-align: center;" >
-                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                </div>
-                <div style=3D"display: flex; text-align: center;" >
-                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${body.Tel}</h5>
-                    <h5 style="margin-right: 10%;">Option is: ${body.Option}</h5>
-                    <h5 style="margin-right: 10%;">Result is: ${body.Result}</h5>
-                    <h5 style="margin-right: 10%;">Contact is: ${body.Contact}</h5>
-                    <h5>Description is: ${body.Description}</h5>
-                </div>
-                <h6>Message is: ${body.Message}</h6>
-                </div>`,
+                html: emailHtmlContent,
             });
             // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
             return res
@@ -316,6 +265,7 @@ const sentMail: RequestHandler = async (req, res, next) => {
             // const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
             //     locale: th,
             // });
+            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
             setTimeout(async () => {
                 // ส่งอีเมล์ทันที
                 const info = await transport.sendMail({
@@ -323,24 +273,12 @@ const sentMail: RequestHandler = async (req, res, next) => {
                     to: user.Email,
                     subject: user.Firstname,
                     text: `Sender is: ${user.Username}`,
-                    html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                    <div style=3D"color: yellow; text-align: center;" >
-                        <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                    </div>
-                    <div style=3D"display: flex; text-align: center;" >
-                        <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${sms.Tel}</h5>
-                        <h5 style="margin-right: 10%;">Option is: ${sms.Option}</h5>
-                        <h5 style="margin-right: 10%;">Result is: ${sms.Result}</h5>
-                        <h5 style="margin-right: 10%;">Contact is: ${sms.Contact}</h5>
-                        <h5>Description is: ${sms.Description}</h5>
-                        <h5>date time is: ${formattedScheduleDate}</h5>
-                    </div>
-                    <h6>Message is: ${combinedMessageData}</h6>
-                    </div>`,
+                    html: emailHtmlContent,
                 });
             }, millisecondsUntilScheduledTime);
             return res.status(201).json({ Message: 'Messages created and email scheduled successfully for future' });
         } else {
+            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
             // กำหนดเวลาที่ผ่านมาหรือไม่ได้ระบุ
             // ส่งอีเมล์ทันที
             const info = await transport.sendMail({
@@ -348,44 +286,19 @@ const sentMail: RequestHandler = async (req, res, next) => {
                 to: user.Email,
                 subject: user.Firstname,
                 text: `Sender is: ${user.Username}`,
-                html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                <div style=3D"color: yellow; text-align: center;" >
-                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                </div>
-                <div style=3D"display: flex; text-align: center;" >
-                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${sms.Tel}</h5>
-                    <h5 style="margin-right: 10%;">Option is: ${sms.Option}</h5>
-                    <h5 style="margin-right: 10%;">Result is: ${sms.Result}</h5>
-                    <h5 style="margin-right: 10%;">Contact is: ${sms.Contact}</h5>
-                    <h5>Description is: ${sms.Description}</h5>
-                    <h5>date time is: date past</h5>
-                </div>
-                <h6>Message is: ${combinedMessageData}</h6>
-                </div>`,
+                html: emailHtmlContent,
             });
             return res.status(201).json({ info, Message: 'Messages created and email sent successfully for past' });
         }
     } else {
+        const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
         // ส่งอีเมล์ทันที
         const info = await transport.sendMail({
             from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
             to: user.Email,
             subject: user.Firstname,
             text: `Sender is: ${user.Username}`,
-            html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-            <div style=3D"color: yellow; text-align: center;" >
-                <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-            </div>
-            <div style=3D"display: flex; text-align: center;" >
-                <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${sms.Tel}</h5>
-                <h5 style="margin-right: 10%;">Option is: ${sms.Option}</h5>
-                <h5 style="margin-right: 10%;">Result is: ${sms.Result}</h5>
-                <h5 style="margin-right: 10%;">Contact is: ${sms.Contact}</h5>
-                <h5>Description is: ${sms.Description}</h5>
-                <h5>date time is: date immediate</h5>
-            </div>
-            <h6>Message is: ${combinedMessageData}</h6>
-            </div>`,
+            html: emailHtmlContent,
         });
         return res.status(201).json({ info, Message: 'Messages created and email sent successfully for immediate' });
     }
@@ -458,6 +371,7 @@ const sentMail140: RequestHandler = async (req, res, next) => {
             // const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
             //     locale: th,
             // });
+            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
             setTimeout(async () => {
                 // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
                 const emailPromises = messages.map(async (data: any) => {
@@ -467,20 +381,7 @@ const sentMail140: RequestHandler = async (req, res, next) => {
                         to: user.Email,
                         subject: user.Firstname,
                         text: `Sender is: ${user.Username}`,
-                        html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                <div style=3D"color: yellow; text-align: center;" >
-                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                </div>
-                <div style=3D"display: flex; text-align: center;" >
-                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${sms.Tel}</h5>
-                    <h5 style="margin-right: 10%;">Option is: ${sms.Option}</h5>
-                    <h5 style="margin-right: 10%;">Result is: ${sms.Result}</h5>
-                    <h5 style="margin-right: 10%;">Contact is: ${sms.Contact}</h5>
-                    <h5>Description is: ${sms.Description}</h5>
-                    <h5>date time is: ${formattedScheduleDate}</h5>
-                </div>
-                <h6>Message is: ${data.Message}</h6>
-                </div>`,
+                        html: emailHtmlContent,
                     });
                     return info;
                 });
@@ -489,6 +390,7 @@ const sentMail140: RequestHandler = async (req, res, next) => {
             }, millisecondsUntilScheduledTime);
             return res.status(201).json({ Message: 'Messages created and email scheduled successfully for future' });
         } else {
+            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
             // กำหนดเวลาที่ผ่านมาหรือไม่ได้ระบุ
             // ส่งอีเมล์ทันที
             // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
@@ -499,20 +401,7 @@ const sentMail140: RequestHandler = async (req, res, next) => {
                     to: user.Email,
                     subject: user.Firstname,
                     text: `Sender is: ${user.Username}`,
-                    html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                <div style=3D"color: yellow; text-align: center;" >
-                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                </div>
-                <div style=3D"display: flex; text-align: center;" >
-                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${sms.Tel}</h5>
-                    <h5 style="margin-right: 10%;">Option is: ${sms.Option}</h5>
-                    <h5 style="margin-right: 10%;">Result is: ${sms.Result}</h5>
-                    <h5 style="margin-right: 10%;">Contact is: ${sms.Contact}</h5>
-                    <h5>Description is: ${sms.Description}</h5>
-                    <h5>date time is: ${formattedScheduleDate}</h5>
-                </div>
-                <h6>Message is: ${data.Message}</h6>
-                </div>`,
+                    html: emailHtmlContent,
                 });
                 return info;
             });
@@ -522,6 +411,7 @@ const sentMail140: RequestHandler = async (req, res, next) => {
             return res.status(201).json({ Message: 'Messages created and email sent successfully for past' });
         }
     } else {
+        const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
         // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
         const emailPromises = messages.map(async (data: any) => {
             const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
@@ -530,20 +420,7 @@ const sentMail140: RequestHandler = async (req, res, next) => {
                 to: user.Email,
                 subject: user.Firstname,
                 text: `Sender is: ${user.Username}`,
-                html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                <div style=3D"color: yellow; text-align: center;" >
-                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                </div>
-                <div style=3D"display: flex; text-align: center;" >
-                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${sms.Tel}</h5>
-                    <h5 style="margin-right: 10%;">Option is: ${sms.Option}</h5>
-                    <h5 style="margin-right: 10%;">Result is: ${sms.Result}</h5>
-                    <h5 style="margin-right: 10%;">Contact is: ${sms.Contact}</h5>
-                    <h5>Description is: ${sms.Description}</h5>
-                    <h5>date time is: ${formattedScheduleDate}</h5>
-                </div>
-                <h6>Message is: ${data.Message}</h6>
-                </div>`,
+                html: emailHtmlContent,
             });
             return info;
         });
@@ -631,6 +508,7 @@ const sentManySMS: RequestHandler = async (req, res, next) => {
                 // const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
                 //     locale: th,
                 // });
+                const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                 setTimeout(async () => {
                     // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
                     const emailPromises = messages.map(async (data: any) => {
@@ -640,20 +518,7 @@ const sentManySMS: RequestHandler = async (req, res, next) => {
                             to: user.Email,
                             subject: user.Firstname,
                             text: `Sender is: ${user.Username}`,
-                            html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                <div style=3D"color: yellow; text-align: center;" >
-                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                </div>
-                <div style=3D"display: flex; text-align: center;" >
-                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${sms.Tel}</h5>
-                    <h5 style="margin-right: 10%;">Option is: ${sms.Option}</h5>
-                    <h5 style="margin-right: 10%;">Result is: ${sms.Result}</h5>
-                    <h5 style="margin-right: 10%;">Contact is: ${sms.Contact}</h5>
-                    <h5>Description is: ${sms.Description}</h5>
-                    <h5>date time is: ${formattedScheduleDate}</h5>
-                </div>
-                <h6>Message is: ${data.Message}</h6>
-                </div>`,
+                            html: emailHtmlContent,
                         });
                         return info;
                     });
@@ -664,6 +529,7 @@ const sentManySMS: RequestHandler = async (req, res, next) => {
                 //     .status(201)
                 //     .json({ Message: 'Messages created and email scheduled successfully for future' });
             } else {
+                const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                 // กำหนดเวลาที่ผ่านมาหรือไม่ได้ระบุ
                 // ส่งอีเมล์ทันที
                 // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
@@ -674,20 +540,7 @@ const sentManySMS: RequestHandler = async (req, res, next) => {
                         to: user.Email,
                         subject: user.Firstname,
                         text: `Sender is: ${user.Username}`,
-                        html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                <div style=3D"color: yellow; text-align: center;" >
-                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                </div>
-                <div style=3D"display: flex; text-align: center;" >
-                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${sms.Tel}</h5>
-                    <h5 style="margin-right: 10%;">Option is: ${sms.Option}</h5>
-                    <h5 style="margin-right: 10%;">Result is: ${sms.Result}</h5>
-                    <h5 style="margin-right: 10%;">Contact is: ${sms.Contact}</h5>
-                    <h5>Description is: ${sms.Description}</h5>
-                    <h5>date time is: ${formattedScheduleDate}</h5>
-                </div>
-                <h6>Message is: ${data.Message}</h6>
-                </div>`,
+                        html: emailHtmlContent,
                     });
                     return info;
                 });
@@ -696,6 +549,7 @@ const sentManySMS: RequestHandler = async (req, res, next) => {
                 // return res.status(201).json({ Message: 'Messages created and email sent successfully for past' });
             }
         } else {
+            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
             // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
             const emailPromises = messages.map(async (data: any) => {
                 const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
@@ -704,20 +558,7 @@ const sentManySMS: RequestHandler = async (req, res, next) => {
                     to: user.Email,
                     subject: user.Firstname,
                     text: `Sender is: ${user.Username}`,
-                    html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                <div style=3D"color: yellow; text-align: center;" >
-                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                </div>
-                <div style=3D"display: flex; text-align: center;" >
-                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${sms.Tel}</h5>
-                    <h5 style="margin-right: 10%;">Option is: ${sms.Option}</h5>
-                    <h5 style="margin-right: 10%;">Result is: ${sms.Result}</h5>
-                    <h5 style="margin-right: 10%;">Contact is: ${sms.Contact}</h5>
-                    <h5>Description is: ${sms.Description}</h5>
-                    <h5>date time is: ${formattedScheduleDate}</h5>
-                </div>
-                <h6>Message is: ${data.Message}</h6>
-                </div>`,
+                    html: emailHtmlContent,
                 });
                 return info;
             });
@@ -823,6 +664,7 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
                     // const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
                     //     locale: th,
                     // });
+                    const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                     setTimeout(async () => {
                         // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
                         const emailPromises = messages.map(async (data: any) => {
@@ -832,20 +674,7 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
                                 to: user.Email,
                                 subject: user.Firstname,
                                 text: `Sender is: ${user.Username}`,
-                                html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                <div style=3D"color: yellow; text-align: center;" >
-                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                </div>
-                <div style=3D"display: flex; text-align: center;" >
-                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${sms.Tel}</h5>
-                    <h5 style="margin-right: 10%;">Option is: ${sms.Option}</h5>
-                    <h5 style="margin-right: 10%;">Result is: ${sms.Result}</h5>
-                    <h5 style="margin-right: 10%;">Contact is: ${sms.Contact}</h5>
-                    <h5>Description is: ${sms.Description}</h5>
-                    <h5>date time is: ${formattedScheduleDate}</h5>
-                </div>
-                <h6>Message is: ${data.Message}</h6>
-                </div>`,
+                                html: emailHtmlContent,
                             });
                             return info;
                         });
@@ -856,6 +685,7 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
                         .status(201)
                         .json({ Message: 'Messages created and email scheduled successfully for future' });
                 } else {
+                    const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                     // กำหนดเวลาที่ผ่านมาหรือไม่ได้ระบุ
                     // ส่งอีเมล์ทันที
                     // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
@@ -866,20 +696,7 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
                             to: user.Email,
                             subject: user.Firstname,
                             text: `Sender is: ${user.Username}`,
-                            html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                <div style=3D"color: yellow; text-align: center;" >
-                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                </div>
-                <div style=3D"display: flex; text-align: center;" >
-                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${sms.Tel}</h5>
-                    <h5 style="margin-right: 10%;">Option is: ${sms.Option}</h5>
-                    <h5 style="margin-right: 10%;">Result is: ${sms.Result}</h5>
-                    <h5 style="margin-right: 10%;">Contact is: ${sms.Contact}</h5>
-                    <h5>Description is: ${sms.Description}</h5>
-                    <h5>date time is: ${formattedScheduleDate}</h5>
-                </div>
-                <h6>Message is: ${data.Message}</h6>
-                </div>`,
+                            html: emailHtmlContent,
                         });
                         return info;
                     });
@@ -889,6 +706,7 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
                     return res.status(201).json({ Message: 'Messages created and email sent successfully for past' });
                 }
             } else {
+                const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                 // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
                 const emailPromises = messages.map(async (data: any) => {
                     const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
@@ -897,20 +715,7 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
                         to: user.Email,
                         subject: user.Firstname,
                         text: `Sender is: ${user.Username}`,
-                        html: `<div style="background-color: black; color: white; text-align: left; padding: 10px;">
-                <div style=3D"color: yellow; text-align: center;" >
-                    <h3>sent mail to ${user.Firstname} ${user.Lastname}</h3>
-                </div>
-                <div style=3D"display: flex; text-align: center;" >
-                    <h5 style="margin-right: 10%;">Tel is : ${user.Tel} or ${sms.Tel}</h5>
-                    <h5 style="margin-right: 10%;">Option is: ${sms.Option}</h5>
-                    <h5 style="margin-right: 10%;">Result is: ${sms.Result}</h5>
-                    <h5 style="margin-right: 10%;">Contact is: ${sms.Contact}</h5>
-                    <h5>Description is: ${sms.Description}</h5>
-                    <h5>date time is: ${formattedScheduleDate}</h5>
-                </div>
-                <h6>Message is: ${data.Message}</h6>
-                </div>`,
+                        html: emailHtmlContent,
                     });
                     return info;
                 });
