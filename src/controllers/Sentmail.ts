@@ -100,7 +100,6 @@ const sentSMSCreate: RequestHandler = async (req, res, next) => {
         const Management = await tx.sMSManagement.create({
             data: payload,
         });
-
         const splitRow = body.Message.match(/.{1,140}/g); // ตัดข้อความเป็นชุดตามรูปแบบที่กำหนด
         // const rejoinedText = splitRow ? splitRow.join('') : ''; // นำชุดของตัวอักษรกลับมาต่อกันเหมือนเดิม
         // const numberOfChunks = splitRow ? splitRow.length : 0; // จำนวนของชุดของตัวอักษร
@@ -116,16 +115,15 @@ const sentSMSCreate: RequestHandler = async (req, res, next) => {
                 data: payloadMessage,
             });
         }
+        const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
         if (scheduleDate) {
             // - 7 hours to scheduleDate เพื่อเก็บการส่งเป็นเวลาโกบอล
             scheduleDate.setHours(scheduleDate.getHours() - 7);
             if (!isPast(scheduleDate)) {
                 // !isPast(scheduleDate) ไม่ใช่อดีต
-
                 // ถ้า ScheduleDate ถูกกำหนดและไม่ได้อยู่ในอดีต
                 // คำนวณเวลาที่ต้องการส่งอีเมล์โดยหาความแตกต่างของเวลาปัจจุบันกับ ScheduleDate
                 const millisecondsUntilScheduledTime = scheduleDate.getTime() - Date.now();
-                const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                 // ประกาศ Timezone ที่ต้องการใช้
                 // const timeZoneOffsetInHours = 7; // UTC+7 for Bangkok
                 // แปลง scheduleDate เป็นเวลาใน timezone ที่ต้องการ
@@ -154,8 +152,6 @@ const sentSMSCreate: RequestHandler = async (req, res, next) => {
                     .status(201)
                     .json({ Management, Message: 'Messages created and email scheduled successfully time future' });
             }
-            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
-
             // ส่งอีเมล์ทันที
             const info = await transport.sendMail({
                 from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
@@ -178,8 +174,6 @@ const sentSMSCreate: RequestHandler = async (req, res, next) => {
                 console.log('Scheduled time is in the past', formattedScheduleDate);
                 // return res.status(400).json({ error: 'Scheduled time is in the past' });
             }
-            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
-
             // ถ้า ScheduleDate ไม่ได้ระบุ
             // ส่งอีเมล์ทันที
             const info = await transport.sendMail({
@@ -224,8 +218,8 @@ const sentMail: RequestHandler = async (req, res, next) => {
         host: 'sandbox.smtp.mailtrap.io',
         port: 2525,
         auth: {
-            user: 'b0147891f258c2',
-            pass: '4ff23679f73610',
+            user: 'e226b5ee73dcdc',
+            pass: 'd171146ae7420f',
         },
     });
 
@@ -254,9 +248,11 @@ const sentMail: RequestHandler = async (req, res, next) => {
     if (!messages || messages.length === 0) {
         return res.status(403).json({ error: 'None message' });
     }
-    const scheduleDate = new Date(sms.ScheduleDate);
     // สร้างข้อความจาก messages
     const combinedMessageData = messages.map((data: any) => data.Message).join('');
+    const scheduleDate = new Date(sms.ScheduleDate);
+    const emailHtmlContent = createEmailHtmlContent(user, sms, combinedMessageData);
+    // const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
     if (scheduleDate) {
         scheduleDate.setHours(scheduleDate.getHours() - 7);
         if (!isPast(scheduleDate)) {
@@ -265,7 +261,6 @@ const sentMail: RequestHandler = async (req, res, next) => {
             // const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
             //     locale: th,
             // });
-            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
             setTimeout(async () => {
                 // ส่งอีเมล์ทันที
                 const info = await transport.sendMail({
@@ -278,7 +273,6 @@ const sentMail: RequestHandler = async (req, res, next) => {
             }, millisecondsUntilScheduledTime);
             return res.status(201).json({ Message: 'Messages created and email scheduled successfully for future' });
         } else {
-            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
             // กำหนดเวลาที่ผ่านมาหรือไม่ได้ระบุ
             // ส่งอีเมล์ทันที
             const info = await transport.sendMail({
@@ -291,7 +285,6 @@ const sentMail: RequestHandler = async (req, res, next) => {
             return res.status(201).json({ info, Message: 'Messages created and email sent successfully for past' });
         }
     } else {
-        const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
         // ส่งอีเมล์ทันที
         const info = await transport.sendMail({
             from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
@@ -361,6 +354,7 @@ const sentMail140: RequestHandler = async (req, res, next) => {
     if (!messages || messages.length === 0) {
         return res.status(403).json({ error: 'None message' });
     }
+    const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
     const scheduleDate = new Date(sms.ScheduleDate);
     // สร้างข้อความจาก messages
     if (scheduleDate) {
@@ -371,7 +365,6 @@ const sentMail140: RequestHandler = async (req, res, next) => {
             // const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
             //     locale: th,
             // });
-            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
             setTimeout(async () => {
                 // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
                 const emailPromises = messages.map(async (data: any) => {
@@ -390,7 +383,6 @@ const sentMail140: RequestHandler = async (req, res, next) => {
             }, millisecondsUntilScheduledTime);
             return res.status(201).json({ Message: 'Messages created and email scheduled successfully for future' });
         } else {
-            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
             // กำหนดเวลาที่ผ่านมาหรือไม่ได้ระบุ
             // ส่งอีเมล์ทันที
             // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
@@ -411,7 +403,6 @@ const sentMail140: RequestHandler = async (req, res, next) => {
             return res.status(201).json({ Message: 'Messages created and email sent successfully for past' });
         }
     } else {
-        const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
         // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
         const emailPromises = messages.map(async (data: any) => {
             const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
@@ -434,7 +425,6 @@ const sentMail140: RequestHandler = async (req, res, next) => {
 const sentManySMS: RequestHandler = async (req, res, next) => {
     const { SMS_IDs }: { SMS_IDs: any[] } = req.body;
     // return res.status(200).json({ 'SMS_IDs:': SMS_IDs });
-
     // Check if SMS_IDs is an array and not empty
     if (!Array.isArray(SMS_IDs) || SMS_IDs.length === 0) {
         return res.status(400).json({ error: 'Invalid SMS_IDs' });
@@ -498,6 +488,7 @@ const sentManySMS: RequestHandler = async (req, res, next) => {
         if (!messages || messages.length === 0) {
             return res.status(403).json({ error: 'None message' });
         }
+        const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
         const scheduleDate = new Date(sms.ScheduleDate);
         // สร้างข้อความจาก messages
         if (scheduleDate) {
@@ -508,7 +499,6 @@ const sentManySMS: RequestHandler = async (req, res, next) => {
                 // const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
                 //     locale: th,
                 // });
-                const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                 setTimeout(async () => {
                     // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
                     const emailPromises = messages.map(async (data: any) => {
@@ -529,7 +519,6 @@ const sentManySMS: RequestHandler = async (req, res, next) => {
                 //     .status(201)
                 //     .json({ Message: 'Messages created and email scheduled successfully for future' });
             } else {
-                const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                 // กำหนดเวลาที่ผ่านมาหรือไม่ได้ระบุ
                 // ส่งอีเมล์ทันที
                 // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
@@ -549,7 +538,6 @@ const sentManySMS: RequestHandler = async (req, res, next) => {
                 // return res.status(201).json({ Message: 'Messages created and email sent successfully for past' });
             }
         } else {
-            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
             // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
             const emailPromises = messages.map(async (data: any) => {
                 const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
@@ -654,6 +642,7 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
             if (!messages || messages.length === 0) {
                 return res.status(403).json({ error: 'None message' });
             }
+            // const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
             const scheduleDate = new Date(sms.ScheduleDate);
             // สร้างข้อความจาก messages
             if (scheduleDate) {
@@ -664,11 +653,10 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
                     // const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
                     //     locale: th,
                     // });
-                    const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                     setTimeout(async () => {
                         // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
                         const emailPromises = messages.map(async (data: any) => {
-                            const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
+                            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                             const info = await transport.sendMail({
                                 from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
                                 to: user.Email,
@@ -678,6 +666,7 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
                             });
                             return info;
                         });
+
                         // รอให้การส่งอีเมลล์ทั้งหมดเสร็จสมบูรณ์ก่อนที่จะส่งคำตอบ
                         await Promise.all(emailPromises);
                     }, millisecondsUntilScheduledTime);
@@ -685,12 +674,11 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
                         .status(201)
                         .json({ Message: 'Messages created and email scheduled successfully for future' });
                 } else {
-                    const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                     // กำหนดเวลาที่ผ่านมาหรือไม่ได้ระบุ
                     // ส่งอีเมล์ทันที
                     // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
                     const emailPromises = messages.map(async (data: any) => {
-                        const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
+                        const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                         const info = await transport.sendMail({
                             from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
                             to: user.Email,
@@ -706,10 +694,9 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
                     return res.status(201).json({ Message: 'Messages created and email sent successfully for past' });
                 }
             } else {
-                const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                 // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
                 const emailPromises = messages.map(async (data: any) => {
-                    const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
+                    const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                     const info = await transport.sendMail({
                         from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
                         to: user.Email,

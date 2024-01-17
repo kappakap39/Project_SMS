@@ -55,7 +55,7 @@ function chunkArray(arr: any[], batchSize: number) {
 
 const createEmailHtmlContent = (user: any, sms: any, message: string) => {
     return `
-        <div style="background-color: red; color: #fff; font-family: Arial, sans-serif; padding: 20px;">
+        <div style="background-color: #adb9bd; color: #fff; font-family: Arial, sans-serif; padding: 20px;">
             <div style="text-align: center; padding-bottom: 20px;">
                 <h2 style="color: #ffcc00;">Sent Mail to ${user.Firstname} ${user.Lastname}</h2>
             </div>
