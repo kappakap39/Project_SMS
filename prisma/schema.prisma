@@ -71,6 +71,7 @@ model UserManagement {
   log_History Log_History[] @relation(name: "LogHistory")
 
   fileImg FileImg[] @relation(name: "Img")
+
 }
 
 model SMSManagement {
@@ -87,25 +88,26 @@ model SMSManagement {
   //! Maioltrap
   UserEmail String?
   PassEmail String?
-
+  
   //!Standard
-  CreatedAt    DateTime  @default(now())
-  UpdatedAt    DateTime  @updatedAt
+  CreatedAt DateTime @default(now())
+  UpdatedAt DateTime @updatedAt
 
   smsMessage SMSMessage[] @relation("Messages")
 
   userManagement UserManagement @relation(name: "SMSManagements", fields: [UserID], references: [UserID])
+
 }
 
 model SMSMessage {
   MessageID String   @id @default(uuid()) @db.Uuid
-  SMS_ID     String   @db.Uuid
+  SMS_ID    String   @db.Uuid
   Message   String?  @db.VarChar(255)
   //!Standard
   CreatedAt DateTime @default(now())
   UpdatedAt DateTime @updatedAt
 
-  smsManagement SMSManagement @relation(name: "Messages", fields: [SMS_ID], references: [SMS_ID] , onDelete: Cascade)
+  smsManagement SMSManagement @relation(name: "Messages", fields: [SMS_ID], references: [SMS_ID], onDelete: Cascade)
 }
 
 model TokenUser {

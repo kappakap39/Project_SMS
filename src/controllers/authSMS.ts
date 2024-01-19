@@ -211,6 +211,7 @@ const addSMS: RequestHandler = async (req, res, next) => {
     });
 };
 
+//! update
 const updateSMS: RequestHandler = async (req, res) => {
     //todo1: Token
     const SECRET_KEY = process.env.SECRET_KEY || 'default_secret_key';
@@ -371,5 +372,6 @@ const deleteSMS: RequestHandler = async (req, res) => {
     });
     return res.json(deleteSMS);
 };
+
 
 export { getSMSByID, getSMSWithMessages, getSMSByUserID, addSMS, updateSMS, deleteSMS };

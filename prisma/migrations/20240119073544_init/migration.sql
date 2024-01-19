@@ -55,6 +55,8 @@ CREATE TABLE "SMSManagement" (
     "ScheduleDate" TIMESTAMP(3),
     "Option" TEXT,
     "Description" TEXT DEFAULT '${SmsManagement.Result}',
+    "UserEmail" TEXT,
+    "PassEmail" TEXT,
     "CreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "UpdatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -95,17 +97,39 @@ CREATE TABLE "Log_History" (
     CONSTRAINT "Log_History_pkey" PRIMARY KEY ("LoggetID")
 );
 
+-- CreateTable
+CREATE TABLE "FileImg" (
+    "ImgID" UUID NOT NULL,
+    "UserID" UUID NOT NULL,
+    "CreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedAt" TIMESTAMP(3) NOT NULL,
+    "FileName" TEXT NOT NULL,
+    "OriginalName" TEXT NOT NULL,
+    "FilePath" TEXT NOT NULL,
+    "FileKey" TEXT NOT NULL,
+    "Mimetype" TEXT NOT NULL,
+    "FileSize" TEXT NOT NULL,
+
+    CONSTRAINT "FileImg_pkey" PRIMARY KEY ("ImgID")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "UserManagement_Email_key" ON "UserManagement"("Email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "FileImg_FileName_key" ON "FileImg"("FileName");
 
 -- AddForeignKey
 ALTER TABLE "SMSManagement" ADD CONSTRAINT "SMSManagement_UserID_fkey" FOREIGN KEY ("UserID") REFERENCES "UserManagement"("UserID") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "SMSMessage" ADD CONSTRAINT "SMSMessage_SMS_ID_fkey" FOREIGN KEY ("SMS_ID") REFERENCES "SMSManagement"("SMS_ID") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "SMSMessage" ADD CONSTRAINT "SMSMessage_SMS_ID_fkey" FOREIGN KEY ("SMS_ID") REFERENCES "SMSManagement"("SMS_ID") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "TokenUser" ADD CONSTRAINT "TokenUser_UserID_fkey" FOREIGN KEY ("UserID") REFERENCES "UserManagement"("UserID") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Log_History" ADD CONSTRAINT "Log_History_UserID_fkey" FOREIGN KEY ("UserID") REFERENCES "UserManagement"("UserID") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "FileImg" ADD CONSTRAINT "FileImg_UserID_fkey" FOREIGN KEY ("UserID") REFERENCES "UserManagement"("UserID") ON DELETE RESTRICT ON UPDATE CASCADE;
