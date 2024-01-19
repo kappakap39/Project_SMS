@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import Joi from 'joi';
 import bcrypt from 'bcrypt';
 import { RequestHandler } from 'express';

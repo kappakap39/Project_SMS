@@ -1,16 +1,7 @@
 import Joi from 'joi';
 import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import { RequestHandler } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { CustomHelpers } from 'joi';
-import nodemailer from 'nodemailer';
-import express, { Request, Response, NextFunction } from 'express';
-import multer from 'multer';
-import path from 'path';
-import { upload, generateFileKey } from '../Utils/Upload';
-import prisma from '../lib/db';
-const expirationTime = process.env.EXPIRATION_TIME;
 
 const getUser: RequestHandler = async (req, res) => {
     const prisma = new PrismaClient(); // สร้าง PrismaClient instance

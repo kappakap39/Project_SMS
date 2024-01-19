@@ -2,7 +2,7 @@ import { RequestHandler } from 'express';
 import prisma from '../lib/db';
 import Nexmo, { MessageError, MessageRequestResponse } from 'nexmo';
 
-const sentMailTest: RequestHandler = async (req, res, next) => {
+const sentMailTest: RequestHandler = async (req, res) => {
     try {
         const { SMS_ID }: any = req.query;
         const sms: any = await prisma.sMSManagement.findUnique({

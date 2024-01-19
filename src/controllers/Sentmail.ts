@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { RequestHandler } from 'express';
 import { Request, Response, NextFunction } from 'express';
 import Joi, { date } from 'joi';

@@ -1,15 +1,9 @@
 import { RequestHandler } from 'express';
-import { Request, Response, NextFunction } from 'express';
-import Joi, { date } from 'joi';
-import nodemailer from 'nodemailer';
+import Joi from 'joi';
 import prisma from '../lib/db';
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-const expirationTime = process.env.EXPIRATION_TIME;
+import { parseISO } from 'date-fns';
 
-import { isPast, parseISO, format, addHours, isValid, startOfDay, addDays } from 'date-fns';
-import { th } from 'date-fns/locale/th';
-import dayjs from 'dayjs';
 
 //!Get User and admin By ID
 const getSMSByID: RequestHandler = async (req, res) => {
@@ -113,7 +107,7 @@ const getSMSByUserID: RequestHandler = async (req, res) => {
 };
 
 //! add Sms
-const addSMS: RequestHandler = async (req, res, next) => {
+const addSMS: RequestHandler = async (req, res) => {
     const SECRET_KEY = process.env.SECRET_KEY || 'default_secret_key';
     const token = req.headers.authorization?.split(' ')[1];
     console.log('Token ', token);

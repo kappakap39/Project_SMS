@@ -1,14 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { RequestHandler } from 'express';
-import { Request, Response, NextFunction } from 'express';
-import Joi, { date } from 'joi';
+import { Request, Response } from 'express';
+import Joi from 'joi';
 import nodemailer from 'nodemailer';
 import prisma from '../lib/db';
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
-import { handleTokenExpiration, generateOTP } from '../Utils/Object';
-const expirationTime = process.env.EXPIRATION_TIME;
+import { generateOTP } from '../Utils/Object';
 
-const SentMailPwd: RequestHandler = async (req, res, next) => {
+const SentMailPwd: RequestHandler = async (req, res) => {
     const { Email } = req.body;
     // สร้าง OTP
     const otp = await generateOTP();
@@ -56,7 +54,7 @@ const SentMailPwd: RequestHandler = async (req, res, next) => {
             },
         });
         // เพิ่มการตรวจสอบขีดจำกัดของอีเมล์และเตือน
-        transport.verify(function (error, success) {
+        transport.verify(function (error) {
             if (error) {
                 console.error('Mailtrap connection error:', error);
                 return res.status(201).json({ 'Mailtrap connection error:': error });

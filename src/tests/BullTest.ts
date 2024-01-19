@@ -1,9 +1,5 @@
-import Joi from 'joi';
-import bcrypt from 'bcrypt';
+
 import { RequestHandler } from 'express';
-import prisma from '../lib/db';
-import nodemailer from 'nodemailer';
-import { addDays, isValid, startOfDay } from 'date-fns';
 import Queue from 'bull';
 
 const gettestbull: RequestHandler = async (req, res) => {

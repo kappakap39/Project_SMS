@@ -1,13 +1,7 @@
-import Joi, { any } from 'joi';
+import Joi from 'joi';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { RequestHandler } from 'express';
-import { PrismaClient } from '@prisma/client';
-import { CustomHelpers } from 'joi';
-import nodemailer from 'nodemailer';
-import express, { Request, Response, NextFunction } from 'express';
-import multer from 'multer';
-import path from 'path';
+import { Request, Response } from 'express';
 import prisma from '../lib/db';
 import { handleTokenExpiration } from '../Utils/Object';
 const expirationTime = process.env.EXPIRATION_TIME;
