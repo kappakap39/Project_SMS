@@ -112,7 +112,105 @@ const getSMSByUserID: RequestHandler = async (req, res) => {
     }
 };
 
-//! update
+//! add Sms
+const addSMS: RequestHandler = async (req, res, next) => {
+    const SECRET_KEY = process.env.SECRET_KEY || 'default_secret_key';
+    const token = req.headers.authorization?.split(' ')[1];
+    console.log('Token ', token);
+    if (!token) {
+        return res.status(403).json({ error: 'Token not found' });
+    }
+    // ให้ถือว่า Token ถูกต้องเพื่อให้ได้ decodedToken
+    const decodedToken = jwt.verify(token, SECRET_KEY) as { UserID: string };
+    if (!decodedToken.UserID) {
+        return res.status(403).json({ error: 'decodedToken not found' });
+    }
+    console.log('decodedToken: ', decodedToken);
+
+    //! check user
+    // ค้นหาข้อมูลผู้ใช้จากฐานข้อมูล
+    const user = await prisma.userManagement.findUnique({
+        where: {
+            UserID: decodedToken.UserID,
+        },
+    });
+    if (!user) {
+        return res.status(403).json({ error: 'None User' });
+    }
+
+    // create schema object
+    const schema = Joi.object({
+        UserID: Joi.string(),
+        SMS_ID: Joi.string(),
+        Sender: Joi.string(),
+        Tel: Joi.string(),
+        Result: Joi.string(),
+        Contact: Joi.string(),
+        ScheduleDate: Joi.date().iso(),
+        Option: Joi.string(),
+        Description: Joi.string(),
+        UserEmail: Joi.string(),
+        PassEmail: Joi.string(),
+        Message: Joi.string(),
+    });
+    const options = {
+        abortEarly: false, // include all errors
+        allowUnknown: true, // ignore unknown props
+        stripUnknown: true, // remove unknown props
+    };
+    const { error } = schema.validate(req.body, options);
+
+    if (error) {
+        return res.status(422).json({
+            status: 422,
+            message: 'Unprocessable Entity',
+            data: error.details,
+        });
+    }
+    const body = req.body;
+    const scheduleDate = body.ScheduleDate ? parseISO(body.ScheduleDate) : null;
+
+    // Convert the scheduleDate to UTC+7
+    // const scheduleDate = body.ScheduleDate ? addHours(body.ScheduleDate, 7) : null;
+
+    return await prisma.$transaction(async function (tx) {
+        const payload: any = {
+            UserID: decodedToken.UserID,
+            Sender: body.Sender,
+            Tel: body.Tel,
+            Result: body.Result,
+            Contact: body.Contact,
+            ScheduleDate: scheduleDate,
+            Option: body.Option,
+            Description: body.Description,
+            UserEmail: body.UserEmail,
+            PassEmail: body.PassEmail,
+        };
+        const Management = await tx.sMSManagement.create({
+            data: payload,
+        });
+
+        const splitRow = body.Message.match(/.{1,140}/g) || []; // ตัดข้อความเป็นชุดตามรูปแบบที่กำหนด
+
+        // วนลูปเพื่อสร้างและบันทึกข้อความที่ถูกตัดแล้วในฐานข้อมูล
+        for (let i = 0; i < splitRow.length; i++) {
+            // const charactersWithoutSpaces = splitRow[i].replace(/\s/g, '').length;
+
+            const payloadMessage: any = {
+                SMS_ID: Management.SMS_ID,
+                Message: splitRow[i], // ใช้ชุดข้อความที่ถูกตัดแล้วในแต่ละรอบของลูป
+                // CharactersWithoutSpaces: charactersWithoutSpaces,
+            };
+            await tx.sMSMessage.create({
+                data: payloadMessage,
+            });
+        }
+
+        // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
+        return res.status(201).json({ Management, Message: 'Messages created successfully' });
+    });
+};
+
 const updateSMS: RequestHandler = async (req, res) => {
     //todo1: Token
     const SECRET_KEY = process.env.SECRET_KEY || 'default_secret_key';
@@ -178,6 +276,14 @@ const updateSMS: RequestHandler = async (req, res) => {
         payload['Description'] = body.Description;
     }
 
+    if (body.UserEmail) {
+        payload['UserEmail'] = body.UserEmail;
+    }
+
+    if (body.PassEmail) {
+        payload['PassEmail'] = body.PassEmail;
+    }
+
     // todo 5 : save to database
 
     const updatedSMSManagement = await prisma.sMSManagement.update({
@@ -219,6 +325,7 @@ const updateSMS: RequestHandler = async (req, res) => {
 
     return res.json({ updatedSMSManagement, createdMessages });
 };
+
 
 //! deleteSMS
 const deleteSMS: RequestHandler = async (req, res) => {
@@ -264,111 +371,5 @@ const deleteSMS: RequestHandler = async (req, res) => {
     });
     return res.json(deleteSMS);
 };
-
-//! add Sms
-const addSMS: RequestHandler = async (req, res, next) => {
-    const SECRET_KEY = process.env.SECRET_KEY || 'default_secret_key';
-    const token = req.headers.authorization?.split(' ')[1];
-    console.log('Token ', token);
-    
-    // ตรวจสอบว่ามี Token หรือไม่
-    if (!token) {
-        return res.status(403).json({ error: 'Token not found' });
-    }
-    
-    // ถอดรหัส Token เพื่อให้ได้ decodedToken
-    const decodedToken = jwt.verify(token, SECRET_KEY) as { UserID: string };
-    
-    // ถ้าไม่พบ decodedToken
-    if (!decodedToken.UserID) {
-        return res.status(403).json({ error: 'decodedToken not found' });
-    }
-    console.log('decodedToken: ', decodedToken);
-
-    //! check user
-    // ค้นหาข้อมูลผู้ใช้จากฐานข้อมูล
-    const user = await prisma.userManagement.findUnique({
-        where: {
-            UserID: decodedToken.UserID,
-        },
-    });
-    
-    // ถ้าไม่พบผู้ใช้
-    if (!user) {
-        return res.status(403).json({ error: 'None User' });
-    }
-
-    // สร้าง schema สำหรับ validation ข้อมูล
-    const schema = Joi.object({
-        UserID: Joi.string(),
-        SMS_ID: Joi.string(),
-        Sender: Joi.string(),
-        Tel: Joi.string(),
-        Result: Joi.string(),
-        Contact: Joi.string(),
-        ScheduleDate: Joi.date().iso(),
-        Option: Joi.string(),
-        Description: Joi.string(),
-        Message: Joi.string(),
-    });
-
-    const options = {
-        abortEarly: false, // include all errors
-        allowUnknown: true, // ignore unknown props
-        stripUnknown: true, // remove unknown props
-    };
-
-    // ทำการ validate ข้อมูลที่ส่งมาใน request body
-    const { error } = schema.validate(req.body, options);
-
-    if (error) {
-        // ถ้ามี error ในการ validate ให้ส่ง response กลับไปที่ client
-        return res.status(422).json({
-            status: 422,
-            message: 'Unprocessable Entity',
-            data: error.details,
-        });
-    }
-
-    const body = req.body;
-    const scheduleDate = body.ScheduleDate ? dayjs(body.ScheduleDate) : null;
-
-    return await prisma.$transaction(async function (tx) {
-        const payload: any = {
-            UserID: decodedToken.UserID,
-            Sender: body.Sender,
-            Tel: body.Tel,
-            Result: body.Result,
-            Contact: body.Contact,
-            ScheduleDate: scheduleDate,
-            Option: body.Option,
-            Description: body.Description,
-        };
-        
-        // สร้างข้อมูล SMSManagement ใน transaction
-        const Management = await tx.sMSManagement.create({
-            data: payload,
-        });
-
-        const splitRow = body.Message.match(/.{1,140}/g); // ตัดข้อความเป็นชุดตามรูปแบบที่กำหนด
-
-        // วนลูปเพื่อสร้างและบันทึกข้อความที่ถูกตัดแล้วในฐานข้อมูล
-        for (let i = 0; i < splitRow.length; i++) {
-            const payloadMessage: any = {
-                SMS_ID: Management.SMS_ID,
-                Message: splitRow[i], // ใช้ชุดข้อความที่ถูกตัดแล้วในแต่ละรอบของลูป
-            };
-            
-            // สร้างข้อมูล SMSMessage ใน transaction
-            await tx.sMSMessage.create({
-                data: payloadMessage,
-            });
-        }
-        
-        // ส่งคำตอบเมื่อสร้างข้อมูล SMSManagement และ SMSMessage เสร็จสมบูรณ์
-        return res.status(201).json({ Management, Message: 'Messages created successfully' });
-    });
-};
-
 
 export { getSMSByID, getSMSWithMessages, getSMSByUserID, addSMS, updateSMS, deleteSMS };

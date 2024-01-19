@@ -69,6 +69,8 @@ model UserManagement {
   tokenUser TokenUser[] @relation(name: "TokenUser")
 
   log_History Log_History[] @relation(name: "LogHistory")
+
+  fileImg FileImg[] @relation(name: "Img")
 }
 
 model SMSManagement {
@@ -81,6 +83,11 @@ model SMSManagement {
   ScheduleDate DateTime?
   Option       String?
   Description  String?   @default("${SmsManagement.Result}")
+
+  //! Maioltrap
+  UserEmail String?
+  PassEmail String?
+
   //!Standard
   CreatedAt    DateTime  @default(now())
   UpdatedAt    DateTime  @updatedAt
@@ -120,4 +127,19 @@ model Log_History {
   TypeLogger String
 
   userManagement UserManagement @relation(name: "LogHistory", fields: [UserID], references: [UserID])
+}
+
+model FileImg {
+  ImgID       String   @id @default(uuid()) @db.Uuid
+  UserID       String   @db.Uuid
+  CreatedAt    DateTime @default(now())
+  UpdatedAt    DateTime @updatedAt
+  FileName     String   @unique
+  OriginalName String
+  FilePath     String
+  FileKey      String
+  Mimetype     String
+  FileSize     String
+
+  userManagement UserManagement @relation(name: "Img", fields: [UserID], references: [UserID])
 }
