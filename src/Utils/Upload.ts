@@ -1,9 +1,5 @@
-import express, { Request, Response, NextFunction } from 'express';
 import multer, { Multer } from 'multer';
 import path from 'path';
-import prisma from '../lib/db';
-import { PrismaClient } from '@prisma/client';
-import Joi from 'joi';
 // import {UpFile} from '../controllers/authFileController';
 
 const storage = multer.diskStorage({
