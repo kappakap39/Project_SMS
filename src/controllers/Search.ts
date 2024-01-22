@@ -22,20 +22,20 @@ const searchUsers: RequestHandler = async (req, res) => {
         }
 
         const searchConditions: any[] = [
-            { Username: { contains: query.toLowerCase() } },
-            { Userlevel: { contains: query.toLowerCase() } },
+            { Username: { contains: query } },
+            { Userlevel: { contains: query } },
             { Email: { contains: query.toLowerCase() } },
-            { Tel: { contains: query.toLowerCase() } },
+            { Tel: { contains: query } },
             { Statused: query.toLowerCase() === 'true' },
-            { Question: { contains: query.toLowerCase() } },
-            { Answer: { contains: query.toLowerCase() } },
-            { Title: { contains: query.toLowerCase() } },
+            { Question: { contains: query } },
+            { Answer: { contains: query } },
+            { Title: { contains: query } },
             { Firstname: { contains: query.toLowerCase() } },
             { Lastname: { contains: query.toLowerCase() } },
             { Abbreviatename: { contains: query.toLowerCase() } },
-            { CitiZenID: { contains: query.toLowerCase() } },
-            { Effectivedate: dateQuery  },
-            { Expireddate: dateQuery  },
+            { CitiZenID: { contains: query } },
+            { Effectivedate: dateQuery },
+            { Expireddate: dateQuery },
         ];
 
         console.log('searchConditions', searchConditions);
@@ -75,13 +75,19 @@ const searchSMS: RequestHandler = async (req, res) => {
         // Search conditions for SMSManagement
         const smsSearchConditions = {
             OR: [
-                { Sender: { contains: query.toLowerCase() } },
-                { Tel: { contains: query.toLowerCase() } },
-                { Result: { contains: query.toLowerCase() } },
-                { Contact: { contains: query.toLowerCase() } },
-                { Option: { contains: query.toLowerCase() } },
-                { Description: { contains: query.toLowerCase() } },
+                // { Sender: { contains: query.toLowerCase() } },
+                // { Tel: { contains: query.toLowerCase() } },
+                // { Result: { contains: query.toLowerCase() } },
+                // { Contact: { contains: query.toLowerCase() } },
+                // { Option: { contains: query.toLowerCase() } },
+                // { Description: { contains: query.toLowerCase() } },
                 // { ScheduleDate: { equals: query.toLowerCase() } },
+                { Sender: { contains: query } },
+                { Tel: { contains: query } },
+                { Result: { contains: query } },
+                { Contact: { contains: query } },
+                { Option: { contains: query } },
+                { Description: { contains: query } },
                 { ScheduleDate: dateQuery },
             ],
         };
@@ -146,13 +152,19 @@ const searchSMSUserID: RequestHandler = async (req, res) => {
         // Search conditions for SMSManagement
         const smsSearchConditions = {
             OR: [
-                { Sender: { contains: query.toLowerCase() } },
-                { Tel: { contains: query.toLowerCase() } },
-                { Result: { contains: query.toLowerCase() } },
-                { Contact: { contains: query.toLowerCase() } },
-                { Option: { contains: query.toLowerCase() } },
-                { Description: { contains: query.toLowerCase() } },
+                // { Sender: { contains: query.toLowerCase() } },
+                // { Tel: { contains: query.toLowerCase() } },
+                // { Result: { contains: query.toLowerCase() } },
+                // { Contact: { contains: query.toLowerCase() } },
+                // { Option: { contains: query.toLowerCase() } },
+                // { Description: { contains: query.toLowerCase() } },
                 // { ScheduleDate: { equals: dateQuery } },
+                { Sender: { contains: query } },
+                { Tel: { contains: query } },
+                { Result: { contains: query } },
+                { Contact: { contains: query } },
+                { Option: { contains: query } },
+                { Description: { contains: query } },
                 { ScheduleDate: dateQuery },
             ],
         };
@@ -196,12 +208,12 @@ const searchSMSUser: RequestHandler = async (req, res) => {
         // Search conditions for UserManagement
         const userSearchConditions = {
             OR: [
-                { Username: { contains: query.toLowerCase() } },
-                { Userlevel: { contains: query.toLowerCase() } },
+                { Username: { contains: query } },
+                { Userlevel: { contains: query } },
                 { Email: { contains: query.toLowerCase() } },
-                { Tel: { contains: query.toLowerCase() } },
+                { Tel: { contains: query } },
                 { Statused: query.toLowerCase() === 'true' },
-                { Title: { contains: query.toLowerCase() } },
+                { Title: { contains: query } },
                 { Firstname: { contains: query.toLowerCase() } },
                 { Lastname: { contains: query.toLowerCase() } },
                 { Abbreviatename: { contains: query.toLowerCase() } },
@@ -221,12 +233,19 @@ const searchSMSUser: RequestHandler = async (req, res) => {
         // Search conditions for SMSManagement
         const smsSearchConditions = {
             OR: [
-                { Sender: { contains: query.toLowerCase() } },
-                { Tel: { contains: query.toLowerCase() } },
-                { Result: { contains: query.toLowerCase() } },
-                { Contact: { contains: query.toLowerCase() } },
-                { Option: { contains: query.toLowerCase() } },
-                { Description: { contains: query.toLowerCase() } },
+                // { Sender: { contains: query.toLowerCase() } },
+                // { Tel: { contains: query.toLowerCase() } },
+                // { Result: { contains: query.toLowerCase() } },
+                // { Contact: { contains: query.toLowerCase() } },
+                // { Option: { contains: query.toLowerCase() } },
+                // { Description: { contains: query.toLowerCase() } },
+                // { ScheduleDate: dateQuery },
+                { Sender: { contains: query } },
+                { Tel: { contains: query } },
+                { Result: { contains: query } },
+                { Contact: { contains: query } },
+                { Option: { contains: query } },
+                { Description: { contains: query } },
                 { ScheduleDate: dateQuery },
             ],
         };
@@ -246,13 +265,19 @@ const searchSMSUser: RequestHandler = async (req, res) => {
             // Search conditions for SMSManagement
             const smsSearchConditions = {
                 OR: [
-                    { Sender: { contains: query.toLowerCase() } },
-                    { Tel: { contains: query.toLowerCase() } },
-                    { Result: { contains: query.toLowerCase() } },
-                    { Contact: { contains: query.toLowerCase() } },
-                    { Option: { contains: query.toLowerCase() } },
-                    { Description: { contains: query.toLowerCase() } },
+                    // { Sender: { contains: query.toLowerCase() } },
+                    // { Tel: { contains: query.toLowerCase() } },
+                    // { Result: { contains: query.toLowerCase() } },
+                    // { Contact: { contains: query.toLowerCase() } },
+                    // { Option: { contains: query.toLowerCase() } },
+                    // { Description: { contains: query.toLowerCase() } },
                     // { ScheduleDate: { equals: dateQuery } },
+                    { Sender: { contains: query } },
+                    { Tel: { contains: query } },
+                    { Result: { contains: query } },
+                    { Contact: { contains: query } },
+                    { Option: { contains: query } },
+                    { Description: { contains: query } },
                     { ScheduleDate: dateQuery },
                 ],
             };
