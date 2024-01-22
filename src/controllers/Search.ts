@@ -17,7 +17,6 @@ const searchUsers: RequestHandler = async (req, res) => {
                 lt: startOfDay(nextDay),
             };
         }
-
         const searchConditions: any[] = [
             { Username: { contains: query } },
             { Userlevel: { contains: query } },
