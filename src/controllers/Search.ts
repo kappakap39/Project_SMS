@@ -14,7 +14,11 @@ const searchUsers: RequestHandler = async (req, res) => {
         const isValidDate = isValid(parsedDate);
         let dateQuery;
         if (isValidDate) {
-            dateQuery = startOfDay(addDays(parsedDate, 1));
+            const nextDay = addDays(parsedDate, 1);
+            dateQuery = {
+                gte: startOfDay(parsedDate),
+                lt: startOfDay(nextDay),
+            };
         }
 
         const searchConditions: any[] = [
@@ -30,8 +34,8 @@ const searchUsers: RequestHandler = async (req, res) => {
             { Lastname: { contains: query.toLowerCase() } },
             { Abbreviatename: { contains: query.toLowerCase() } },
             { CitiZenID: { contains: query.toLowerCase() } },
-            { Effectivedate: { equals: dateQuery } },
-            { Expireddate: { equals: dateQuery } },
+            { Effectivedate: dateQuery  },
+            { Expireddate: dateQuery  },
         ];
 
         console.log('searchConditions', searchConditions);
@@ -61,7 +65,11 @@ const searchSMS: RequestHandler = async (req, res) => {
         const isValidDate = isValid(parsedDate);
         let dateQuery;
         if (isValidDate) {
-            dateQuery = startOfDay(addDays(parsedDate, 1));
+            const nextDay = addDays(parsedDate, 1);
+            dateQuery = {
+                gte: startOfDay(parsedDate),
+                lt: startOfDay(nextDay),
+            };
         }
 
         // Search conditions for SMSManagement
@@ -73,7 +81,8 @@ const searchSMS: RequestHandler = async (req, res) => {
                 { Contact: { contains: query.toLowerCase() } },
                 { Option: { contains: query.toLowerCase() } },
                 { Description: { contains: query.toLowerCase() } },
-                { ScheduleDate: { equals: dateQuery } },
+                // { ScheduleDate: { equals: query.toLowerCase() } },
+                { ScheduleDate: dateQuery },
             ],
         };
         const smsSearchResults: any = await prisma.sMSManagement.findMany({
@@ -111,7 +120,7 @@ const searchSMS: RequestHandler = async (req, res) => {
                 ...rest,
                 Messages: smsMessagesBySMSID[sms.SMS_ID] ? smsMessagesBySMSID[sms.SMS_ID].join('') : '', // รวม Messages เป็นข้อความเดียวกัน
             };
-        });        
+        });
         res.status(200).json({ enhancedSMSResults });
     } catch (error) {
         console.error('Error during search:', error);
@@ -122,12 +131,16 @@ const searchSMS: RequestHandler = async (req, res) => {
 const searchSMSUserID: RequestHandler = async (req, res) => {
     try {
         const { query } = req.query as { query: string };
-        const { UserID } : any = req.query ;
+        const { UserID }: any = req.query;
         const parsedDate = new Date(query);
         const isValidDate = isValid(parsedDate);
         let dateQuery;
         if (isValidDate) {
-            dateQuery = startOfDay(addDays(parsedDate, 1));
+            const nextDay = addDays(parsedDate, 1);
+            dateQuery = {
+                gte: startOfDay(parsedDate),
+                lt: startOfDay(nextDay),
+            };
         }
 
         // Search conditions for SMSManagement
@@ -139,20 +152,17 @@ const searchSMSUserID: RequestHandler = async (req, res) => {
                 { Contact: { contains: query.toLowerCase() } },
                 { Option: { contains: query.toLowerCase() } },
                 { Description: { contains: query.toLowerCase() } },
-                { ScheduleDate: { equals: dateQuery } }
-            ]
+                // { ScheduleDate: { equals: dateQuery } },
+                { ScheduleDate: dateQuery },
+            ],
         };
 
-        
         // Search for SMSManagement data
         const smsSearchResults = await prisma.sMSManagement.findMany({
             where: {
-                AND: [
-                    smsSearchConditions,
-                    { UserID: UserID }
-                ]
+                AND: [smsSearchConditions, { UserID: UserID }],
             },
-            orderBy: { CreatedAt: 'desc' }
+            orderBy: { CreatedAt: 'desc' },
         });
 
         // Combine and send the results
@@ -170,9 +180,17 @@ const searchSMSUser: RequestHandler = async (req, res) => {
 
         const parsedDate = new Date(query);
         const isValidDate = isValid(parsedDate);
+        // let dateQuery;
+        // if (isValidDate) {
+        //     dateQuery = startOfDay(addDays(parsedDate, 1));
+        // }
         let dateQuery;
         if (isValidDate) {
-            dateQuery = startOfDay(addDays(parsedDate, 1));
+            const nextDay = addDays(parsedDate, 1);
+            dateQuery = {
+                gte: startOfDay(parsedDate),
+                lt: startOfDay(nextDay),
+            };
         }
 
         // Search conditions for UserManagement
@@ -187,8 +205,9 @@ const searchSMSUser: RequestHandler = async (req, res) => {
                 { Firstname: { contains: query.toLowerCase() } },
                 { Lastname: { contains: query.toLowerCase() } },
                 { Abbreviatename: { contains: query.toLowerCase() } },
-                { Effectivedate: { equals: dateQuery } },
-                { Expireddate: { equals: dateQuery } },
+                { Effectivedate: dateQuery },
+                // { Expireddate: { equals: dateQuery } },
+                { ScheduleDate: dateQuery },
             ],
         };
 
@@ -208,18 +227,21 @@ const searchSMSUser: RequestHandler = async (req, res) => {
                 { Contact: { contains: query.toLowerCase() } },
                 { Option: { contains: query.toLowerCase() } },
                 { Description: { contains: query.toLowerCase() } },
-                { ScheduleDate: { equals: dateQuery } },
+                { ScheduleDate: dateQuery },
             ],
         };
         //!
         if (userSearchResults.length === 0) {
-
             const { query } = req.query as { query: string };
             const parsedDate = new Date(query);
             const isValidDate = isValid(parsedDate);
             let dateQuery;
             if (isValidDate) {
-                dateQuery = startOfDay(addDays(parsedDate, 1));
+                const nextDay = addDays(parsedDate, 1);
+                dateQuery = {
+                    gte: startOfDay(parsedDate),
+                    lt: startOfDay(nextDay),
+                };
             }
             // Search conditions for SMSManagement
             const smsSearchConditions = {
@@ -230,7 +252,8 @@ const searchSMSUser: RequestHandler = async (req, res) => {
                     { Contact: { contains: query.toLowerCase() } },
                     { Option: { contains: query.toLowerCase() } },
                     { Description: { contains: query.toLowerCase() } },
-                    { ScheduleDate: { equals: dateQuery } },
+                    // { ScheduleDate: { equals: dateQuery } },
+                    { ScheduleDate: dateQuery },
                 ],
             };
 
@@ -278,6 +301,4 @@ const searchSMSUser: RequestHandler = async (req, res) => {
     }
 };
 
-
-
-export { searchUsers, searchSMS, searchSMSUserID, searchSMSUser, };
+export { searchUsers, searchSMS, searchSMSUserID, searchSMSUser };

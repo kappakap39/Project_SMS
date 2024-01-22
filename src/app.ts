@@ -10,6 +10,9 @@ import Token from './routes/Login';
 import sms from './routes/SMS';
 import search from './routes/Search';
 import test from './tests/Router';
+// main.js (หรือไฟล์ที่เป็นตัวรันแอป)
+import './tests/sentMailBull'; // เรียก Worker สำหรับ Bull Queue
+
 
 //! AE router
 import user from './routes/user';
