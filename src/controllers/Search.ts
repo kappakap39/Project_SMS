@@ -1,9 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import Joi from 'joi';
-import bcrypt from 'bcrypt';
 import { RequestHandler } from 'express';
 import prisma from '../lib/db';
-import nodemailer from 'nodemailer';
 import { addDays, isValid, startOfDay } from 'date-fns';
 // import * as otpGenerator from 'otp-generator';
 
@@ -75,13 +72,6 @@ const searchSMS: RequestHandler = async (req, res) => {
         // Search conditions for SMSManagement
         const smsSearchConditions = {
             OR: [
-                // { Sender: { contains: query.toLowerCase() } },
-                // { Tel: { contains: query.toLowerCase() } },
-                // { Result: { contains: query.toLowerCase() } },
-                // { Contact: { contains: query.toLowerCase() } },
-                // { Option: { contains: query.toLowerCase() } },
-                // { Description: { contains: query.toLowerCase() } },
-                // { ScheduleDate: { equals: query.toLowerCase() } },
                 { Sender: { contains: query } },
                 { Tel: { contains: query } },
                 { Result: { contains: query } },
@@ -152,13 +142,6 @@ const searchSMSUserID: RequestHandler = async (req, res) => {
         // Search conditions for SMSManagement
         const smsSearchConditions = {
             OR: [
-                // { Sender: { contains: query.toLowerCase() } },
-                // { Tel: { contains: query.toLowerCase() } },
-                // { Result: { contains: query.toLowerCase() } },
-                // { Contact: { contains: query.toLowerCase() } },
-                // { Option: { contains: query.toLowerCase() } },
-                // { Description: { contains: query.toLowerCase() } },
-                // { ScheduleDate: { equals: dateQuery } },
                 { Sender: { contains: query } },
                 { Tel: { contains: query } },
                 { Result: { contains: query } },
@@ -192,10 +175,6 @@ const searchSMSUser: RequestHandler = async (req, res) => {
 
         const parsedDate = new Date(query);
         const isValidDate = isValid(parsedDate);
-        // let dateQuery;
-        // if (isValidDate) {
-        //     dateQuery = startOfDay(addDays(parsedDate, 1));
-        // }
         let dateQuery;
         if (isValidDate) {
             const nextDay = addDays(parsedDate, 1);
@@ -218,7 +197,6 @@ const searchSMSUser: RequestHandler = async (req, res) => {
                 { Lastname: { contains: query.toLowerCase() } },
                 { Abbreviatename: { contains: query.toLowerCase() } },
                 { Effectivedate: dateQuery },
-                // { Expireddate: { equals: dateQuery } },
                 { ScheduleDate: dateQuery },
             ],
         };
@@ -233,13 +211,6 @@ const searchSMSUser: RequestHandler = async (req, res) => {
         // Search conditions for SMSManagement
         const smsSearchConditions = {
             OR: [
-                // { Sender: { contains: query.toLowerCase() } },
-                // { Tel: { contains: query.toLowerCase() } },
-                // { Result: { contains: query.toLowerCase() } },
-                // { Contact: { contains: query.toLowerCase() } },
-                // { Option: { contains: query.toLowerCase() } },
-                // { Description: { contains: query.toLowerCase() } },
-                // { ScheduleDate: dateQuery },
                 { Sender: { contains: query } },
                 { Tel: { contains: query } },
                 { Result: { contains: query } },
@@ -265,13 +236,6 @@ const searchSMSUser: RequestHandler = async (req, res) => {
             // Search conditions for SMSManagement
             const smsSearchConditions = {
                 OR: [
-                    // { Sender: { contains: query.toLowerCase() } },
-                    // { Tel: { contains: query.toLowerCase() } },
-                    // { Result: { contains: query.toLowerCase() } },
-                    // { Contact: { contains: query.toLowerCase() } },
-                    // { Option: { contains: query.toLowerCase() } },
-                    // { Description: { contains: query.toLowerCase() } },
-                    // { ScheduleDate: { equals: dateQuery } },
                     { Sender: { contains: query } },
                     { Tel: { contains: query } },
                     { Result: { contains: query } },
@@ -318,7 +282,6 @@ const searchSMSUser: RequestHandler = async (req, res) => {
                 },
             });
             res.status(200).json({ smsResults: smsSearchResults });
-            // res.status(200).json({ userResults: userSearchResults, smsResults: smsSearchResults });
         }
     } catch (error) {
         console.error('Error during search:', error);
