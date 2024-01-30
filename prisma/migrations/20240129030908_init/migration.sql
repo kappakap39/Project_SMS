@@ -22,21 +22,14 @@ CREATE TABLE "UserManagement" (
     "EmpNo" VARCHAR(255),
     "DeptCode" VARCHAR(255),
     "CompanyCode" VARCHAR(255),
-    "OperationCode" VARCHAR(255),
-    "SubOperationCode" VARCHAR(255),
-    "CentralRefNo" VARCHAR(255),
     "BusinessType" VARCHAR(255),
     "DocIssueUnit" VARCHAR(255),
+    "Inhabited" VARCHAR(255),
+    "Province" VARCHAR(255),
+    "District" VARCHAR(255),
+    "Subdistrict" VARCHAR(255),
+    "Zipcode" VARCHAR(5),
     "LockLocation" VARCHAR(255),
-    "DeptFlag" VARCHAR(255),
-    "GrpSubOperation" VARCHAR(255),
-    "GrpOperationCode" VARCHAR(255),
-    "DefaultLanguage" VARCHAR(255),
-    "FontFamily" VARCHAR(255),
-    "FontSize" DOUBLE PRECISION,
-    "DateFormat" DATE,
-    "TimeZone" DATE,
-    "AmountFormat" INTEGER,
     "Remove" BOOLEAN NOT NULL DEFAULT false,
     "CreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "UpdatedAt" TIMESTAMP(3) NOT NULL,
@@ -55,8 +48,6 @@ CREATE TABLE "SMSManagement" (
     "ScheduleDate" TIMESTAMP(3),
     "Option" TEXT,
     "Description" TEXT DEFAULT '${SmsManagement.Result}',
-    "UserEmail" TEXT,
-    "PassEmail" TEXT,
     "CreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "UpdatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -98,9 +89,21 @@ CREATE TABLE "Log_History" (
 );
 
 -- CreateTable
-CREATE TABLE "FileImg" (
+CREATE TABLE "Log_Sent" (
+    "LoggetID" UUID NOT NULL,
+    "CreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedAt" TIMESTAMP(3) NOT NULL,
+    "SMS_ID" UUID NOT NULL,
+    "TypeLogger" TEXT NOT NULL,
+    "DateLog" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Log_Sent_pkey" PRIMARY KEY ("LoggetID")
+);
+
+-- CreateTable
+CREATE TABLE "AllFile" (
     "ImgID" UUID NOT NULL,
-    "UserID" UUID NOT NULL,
+    "Ref_ID" TEXT NOT NULL,
     "CreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "UpdatedAt" TIMESTAMP(3) NOT NULL,
     "FileName" TEXT NOT NULL,
@@ -110,14 +113,38 @@ CREATE TABLE "FileImg" (
     "Mimetype" TEXT NOT NULL,
     "FileSize" TEXT NOT NULL,
 
-    CONSTRAINT "FileImg_pkey" PRIMARY KEY ("ImgID")
+    CONSTRAINT "AllFile_pkey" PRIMARY KEY ("ImgID")
+);
+
+-- CreateTable
+CREATE TABLE "Department" (
+    "DeptID" UUID NOT NULL,
+    "DeptName" VARCHAR(255) NOT NULL,
+    "DeptCode" VARCHAR(255) NOT NULL,
+    "Remove" BOOLEAN NOT NULL DEFAULT false,
+    "CreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Department_pkey" PRIMARY KEY ("DeptID")
+);
+
+-- CreateTable
+CREATE TABLE "Company" (
+    "CompanyID" UUID NOT NULL,
+    "CompanyName" VARCHAR(255) NOT NULL,
+    "CompanyCode" VARCHAR(255) NOT NULL,
+    "Remove" BOOLEAN NOT NULL DEFAULT false,
+    "CreatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "UpdatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Company_pkey" PRIMARY KEY ("CompanyID")
 );
 
 -- CreateIndex
 CREATE UNIQUE INDEX "UserManagement_Email_key" ON "UserManagement"("Email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "FileImg_FileName_key" ON "FileImg"("FileName");
+CREATE UNIQUE INDEX "AllFile_FileName_key" ON "AllFile"("FileName");
 
 -- AddForeignKey
 ALTER TABLE "SMSManagement" ADD CONSTRAINT "SMSManagement_UserID_fkey" FOREIGN KEY ("UserID") REFERENCES "UserManagement"("UserID") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -132,4 +159,4 @@ ALTER TABLE "TokenUser" ADD CONSTRAINT "TokenUser_UserID_fkey" FOREIGN KEY ("Use
 ALTER TABLE "Log_History" ADD CONSTRAINT "Log_History_UserID_fkey" FOREIGN KEY ("UserID") REFERENCES "UserManagement"("UserID") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "FileImg" ADD CONSTRAINT "FileImg_UserID_fkey" FOREIGN KEY ("UserID") REFERENCES "UserManagement"("UserID") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Log_Sent" ADD CONSTRAINT "Log_Sent_SMS_ID_fkey" FOREIGN KEY ("SMS_ID") REFERENCES "SMSManagement"("SMS_ID") ON DELETE RESTRICT ON UPDATE CASCADE;

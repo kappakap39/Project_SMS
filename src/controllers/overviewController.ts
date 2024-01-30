@@ -1,48 +1,13 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { RequestHandler } from 'express';
-import Joi from 'joi';
+import Joi, { date } from 'joi';
 import prisma from '../lib/db';
 import jwt from 'jsonwebtoken';
-import { parseISO } from 'date-fns';
+import { addDays, startOfDay } from 'date-fns';
+const expirationTime = process.env.EXPIRATION_TIME;
 
-//!Get User and admin By ID
-const getSMSByID: RequestHandler = async (req, res) => {
-    try {
-        const { SMS_ID } = req.query;
-        console.log('SMS_ID: ' + SMS_ID);
-        if (SMS_ID) {
-            const ByID = await prisma.sMSManagement.findUnique({
-                where: {
-                    SMS_ID: SMS_ID as string, // ระบุเงื่อนไขการค้นหาข้อมูลที่ต้องการด้วยฟิลด์ที่เป็น unique
-                },
-                include: {
-                    smsMessage: {
-                        select: {
-                            Message: true,
-                        },
-                    },
-                },
-            });
-            if (!ByID) {
-                return res.status(404).json({ error: 'SmsID not Sms' });
-            }
-            const combinedMessages = {
-                ...ByID,
-                combinedMessage: ByID.smsMessage.map((message) => message.Message).join(''),
-            };
-            return res.json(combinedMessages);
-        } else {
-            return res.status(404).json({ error: 'REQ.Params not found' });
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        return res.status(500).json({ error: 'Internal Server Error' });
-    } finally {
-        await prisma.$disconnect();
-    }
-};
-
-//!Get all
-const getSMSWithMessages: RequestHandler = async (req, res) => {
+// ! GetOverviewSMS
+const GetOverviewSMS: RequestHandler = async (req, res) => {
     try {
         const smsManagement = await prisma.sMSManagement.findMany({
             orderBy: {
@@ -54,6 +19,7 @@ const getSMSWithMessages: RequestHandler = async (req, res) => {
                         Message: true,
                     },
                 },
+                userManagement: true,
             },
         });
 
@@ -61,13 +27,7 @@ const getSMSWithMessages: RequestHandler = async (req, res) => {
             return res.status(404).json({ smsManagement: 'No SMS found' });
         }
 
-        // Combine messages with the same SmsID
-        const combinedMessages = smsManagement.map((sms) => {
-            const messages = sms.smsMessage.map((message) => message.Message).join('');
-            return { ...sms, combinedMessage: messages };
-        });
-
-        return res.json(combinedMessages);
+        return res.json(smsManagement);
     } catch (error) {
         console.error('Error:', error);
         return res.status(500).json({ error: 'Internal Server Error' });
@@ -76,294 +36,230 @@ const getSMSWithMessages: RequestHandler = async (req, res) => {
     }
 };
 
-const getSMSByUserID: RequestHandler = async (req, res) => {
+//! GetOverviewSchedue
+const GetOverviewSchedue: RequestHandler = async (req, res) => {
     try {
-        const { UserID }: any = req.query;
-
-        let smsSearchResults;
-
-        if (UserID) {
-            // Search for SMSManagement data by UserID
-            smsSearchResults = await prisma.sMSManagement.findMany({
-                where: {
-                    UserID: UserID,
+        const smsManagement = await prisma.sMSManagement.findMany({
+            orderBy: {
+                CreatedAt: 'asc',
+            },
+            include: {
+                smsMessage: {
+                    select: {
+                        Message: true,
+                    },
                 },
-                orderBy: { CreatedAt: 'desc' },
-            });
-        } else {
-            // If no UserID provided, retrieve all SMSManagement data
-            smsSearchResults = await prisma.sMSManagement.findMany({
-                orderBy: { CreatedAt: 'desc' },
-            });
+                userManagement: true,
+            },
+        });
+
+        if (smsManagement.length === 0) {
+            return res.status(404).json({ smsManagement: 'No SMS found' });
         }
 
-        // Combine and send the results
-        res.status(200).json({ smsResults: smsSearchResults });
+        return res.json(smsManagement);
+    } catch (error) {
+        console.error('Error:', error);
+        return res.status(500).json({ error: 'Internal Server Error' });
+    } finally {
+        await prisma.$disconnect();
+    }
+};
+//! ทำค้นหาเฉพราะวันที่เพียงอย่างเดียว ของ sms ScheduleDate แสดงทั้งหมด
+const searchdateSC: RequestHandler = async (req, res) => {
+    try {
+        const { query } = req.query as { query: string; date: string };
+        const parsedDate = query ? new Date(query) : null;
+
+        let dateQuery;
+        if (parsedDate) {
+            const nextDay = addDays(parsedDate, 1);
+            dateQuery = {
+                gte: startOfDay(parsedDate),
+                lt: startOfDay(nextDay),
+            };
+        }
+        const smsSearchResults: any = await prisma.sMSManagement.findMany({
+            where: { ScheduleDate: dateQuery },
+            orderBy: { CreatedAt: 'desc' },
+            include: {
+                userManagement: {
+                    select: {
+                        Username: true,
+                        Firstname: true,
+                        Lastname: true,
+                    },
+                },
+                smsMessage: {
+                    select: {
+                        Message: true,
+                    },
+                },
+                log_Sent: {
+                    select: {
+                        TypeLogger: true,
+                        DateLog: true,
+                    },
+                },
+            },
+        });
+        const smsMessagesBySMSID: { [key: string]: string[] } = {};
+        for (const sms of smsSearchResults) {
+            const smsID = sms.SMS_ID;
+            if (sms.smsMessage) {
+                if (!smsMessagesBySMSID[smsID]) {
+                    smsMessagesBySMSID[smsID] = sms.smsMessage.map((m: any) => m.Message);
+                } else {
+                    smsMessagesBySMSID[smsID].push(sms.smsMessage.map((m: any) => m.Message));
+                }
+            }
+        }
+        const enhancedSMSResults = smsSearchResults.map((sms: any) => {
+            const { smsMessage, ...rest } = sms;
+            return {
+                ...rest,
+                Messages: smsMessagesBySMSID[sms.SMS_ID] ? smsMessagesBySMSID[sms.SMS_ID].join('') : '', // รวม Messages เป็นข้อความเดียวกัน
+            };
+        });
+        res.status(200).json({ enhancedSMSResults });
     } catch (error) {
         console.error('Error during search:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 
-//! add Sms
-const addSMS: RequestHandler = async (req, res) => {
-    const SECRET_KEY = process.env.SECRET_KEY || 'default_secret_key';
-    const token = req.headers.authorization?.split(' ')[1];
-    console.log('Token ', token);
-    if (!token) {
-        return res.status(403).json({ error: 'Token not found' });
-    }
-    // ให้ถือว่า Token ถูกต้องเพื่อให้ได้ decodedToken
-    const decodedToken = jwt.verify(token, SECRET_KEY) as { UserID: string };
-    if (!decodedToken.UserID) {
-        return res.status(403).json({ error: 'decodedToken not found' });
-    }
-    console.log('decodedToken: ', decodedToken);
+//! ทำค้นหาเฉพราะวันที่เพียงอย่างเดียว ของ sms ScheduleDate แสดงเฉพราะ sms.Result = 'successfully' 
+const searchdateSCS: RequestHandler = async (req, res) => {
+    try {
+        const { query } = req.query as { query: string; date: string };
+        const parsedDate = query ? new Date(query) : null;
 
-    //! check user
-    // ค้นหาข้อมูลผู้ใช้จากฐานข้อมูล
-    const user = await prisma.userManagement.findUnique({
-        where: {
-            UserID: decodedToken.UserID,
-        },
-    });
-    if (!user) {
-        return res.status(403).json({ error: 'None User' });
-    }
-
-    // create schema object
-    const schema = Joi.object({
-        UserID: Joi.string(),
-        SMS_ID: Joi.string(),
-        Sender: Joi.string(),
-        Tel: Joi.string(),
-        Result: Joi.string(),
-        Contact: Joi.string(),
-        ScheduleDate: Joi.date().iso(),
-        Option: Joi.string(),
-        Description: Joi.string(),
-        UserEmail: Joi.string(),
-        PassEmail: Joi.string(),
-        Message: Joi.string(),
-    });
-    const options = {
-        abortEarly: false, // include all errors
-        allowUnknown: true, // ignore unknown props
-        stripUnknown: true, // remove unknown props
-    };
-    const { error } = schema.validate(req.body, options);
-
-    if (error) {
-        return res.status(422).json({
-            status: 422,
-            message: 'Unprocessable Entity',
-            data: error.details,
-        });
-    }
-    const body = req.body;
-    const scheduleDate = body.ScheduleDate ? parseISO(body.ScheduleDate) : null;
-
-    // Convert the scheduleDate to UTC+7
-    // const scheduleDate = body.ScheduleDate ? addHours(body.ScheduleDate, 7) : null;
-
-    return await prisma.$transaction(async function (tx) {
-        const payload: any = {
-            UserID: decodedToken.UserID,
-            Sender: body.Sender,
-            Tel: body.Tel,
-            Result: body.Result,
-            Contact: body.Contact,
-            ScheduleDate: scheduleDate,
-            Option: body.Option,
-            Description: body.Description,
-            UserEmail: body.UserEmail,
-            PassEmail: body.PassEmail,
-        };
-        const Management = await tx.sMSManagement.create({
-            data: payload,
-        });
-
-        const splitRow = body.Message.match(/.{1,140}/g) || []; // ตัดข้อความเป็นชุดตามรูปแบบที่กำหนด
-
-        // วนลูปเพื่อสร้างและบันทึกข้อความที่ถูกตัดแล้วในฐานข้อมูล
-        for (let i = 0; i < splitRow.length; i++) {
-            // const charactersWithoutSpaces = splitRow[i].replace(/\s/g, '').length;
-
-            const payloadMessage: any = {
-                SMS_ID: Management.SMS_ID,
-                Message: splitRow[i], // ใช้ชุดข้อความที่ถูกตัดแล้วในแต่ละรอบของลูป
-                // CharactersWithoutSpaces: charactersWithoutSpaces,
+        let dateQuery;
+        if (parsedDate) {
+            const nextDay = addDays(parsedDate, 1);
+            dateQuery = {
+                gte: startOfDay(parsedDate),
+                lt: startOfDay(nextDay),
             };
-            await tx.sMSMessage.create({
-                data: payloadMessage,
-            });
         }
-
-        // ส่งคำตอบเมื่อส่งอีเมล์เสร็จสมบูรณ์
-        return res.status(201).json({ Management, Message: 'Messages created successfully' });
-    });
-};
-
-//! update
-const updateSMS: RequestHandler = async (req, res) => {
-    //todo1: Token
-    const SECRET_KEY = process.env.SECRET_KEY || 'default_secret_key';
-    const token = req.headers.authorization?.split(' ')[1];
-    console.log('Token ', token);
-    if (!token) {
-        return res.status(403).json({ error: 'Token not found' });
-    }
-    // ให้ถือว่า Token ถูกต้องเพื่อให้ได้ decodedToken
-    const decodedToken = jwt.verify(token, SECRET_KEY) as { UserID: string };
-    if (!decodedToken.UserID) {
-        return res.status(403).json({ error: 'decodedToken not found' });
-    }
-    console.log('decodedToken: ', decodedToken);
-
-    //todo2: Check user
-    // ค้นหาข้อมูลผู้ใช้จากฐานข้อมูล
-    const user = await prisma.userManagement.findUnique({
-        where: {
-            UserID: decodedToken.UserID,
-        },
-    });
-    if (!user) {
-        return res.status(403).json({ error: 'None User' });
-    }
-
-    // todo 3 :  validate
-
-    const body = req.body;
-
-    const payload: any = {};
-
-    // todo 4 : add data to payload
-    if (decodedToken.UserID) {
-        payload['UserID'] = decodedToken.UserID;
-    }
-
-    if (body.Sender) {
-        payload['Sender'] = body.Sender;
-    }
-
-    if (body.Tel) {
-        payload['Tel'] = body.Tel;
-    }
-
-    if (body.Result) {
-        payload['Result'] = body.Result;
-    }
-
-    if (body.Contact) {
-        payload['Contact'] = body.Contact;
-    }
-
-    if (body.ScheduleDate) {
-        payload['ScheduleDate'] = body.ScheduleDate;
-    }
-
-    if (body.Option) {
-        payload['Option'] = body.Option;
-    }
-
-    if (body.Description) {
-        payload['Description'] = body.Description;
-    }
-
-    if (body.UserEmail) {
-        payload['UserEmail'] = body.UserEmail;
-    }
-
-    if (body.PassEmail) {
-        payload['PassEmail'] = body.PassEmail;
-    }
-
-    // todo 5 : save to database
-
-    const updatedSMSManagement = await prisma.sMSManagement.update({
-        where: {
-            SMS_ID: body.SMS_ID,
-        },
-        data: {
-            ...payload,
-            // ลบข้อมูล SMSMessage ที่เชื่อมโยงกับ SMSManagement
-            smsMessage: {
-                deleteMany: {
-                    SMS_ID: body.SMS_ID,
+        const smsSearchResults: any = await prisma.sMSManagement.findMany({
+            where: {
+                ScheduleDate: dateQuery,
+                Result: 'successfully', // เพิ่มเงื่อนไข Result ที่ต้องการ
+            },
+            orderBy: { CreatedAt: 'desc' },
+            include: {
+                userManagement: {
+                    select: {
+                        Username: true,
+                        Firstname: true,
+                        Lastname: true,
+                    },
+                },
+                smsMessage: {
+                    select: {
+                        Message: true,
+                    },
+                },
+                log_Sent: {
+                    select: {
+                        TypeLogger: true,
+                        DateLog: true,
+                    },
                 },
             },
-        },
-    });
-    // ตัดข้อความเป็นชุดๆ ขนาด 140 ตัวอักษร
-    const splitRow = body.Message.match(/.{1,140}/g);
-    const createdMessages = [];
-
-    // วนลูปเพื่อบันทึกข้อความที่ถูกตัดลงในฐานข้อมูล
-    for (let i = 0; i < splitRow.length; i++) {
-        const payloadMessage: any = {
-            SMS_ID: updatedSMSManagement.SMS_ID,
-            Message: splitRow[i], // ใช้ชุดข้อความที่ถูกตัดแล้วในแต่ละรอบของลูป
-        };
-
-        createdMessages.push(payloadMessage);
-
-        // บันทึกข้อมูล SMSMessage ใหม่
-        await prisma.sMSMessage.create({
-            data: payloadMessage,
         });
+        const smsMessagesBySMSID: { [key: string]: string[] } = {};
+        for (const sms of smsSearchResults) {
+            const smsID = sms.SMS_ID;
+            if (sms.smsMessage) {
+                if (!smsMessagesBySMSID[smsID]) {
+                    smsMessagesBySMSID[smsID] = sms.smsMessage.map((m: any) => m.Message);
+                } else {
+                    smsMessagesBySMSID[smsID].push(sms.smsMessage.map((m: any) => m.Message));
+                }
+            }
+        }
+        const enhancedSMSResults = smsSearchResults.map((sms: any) => {
+            const { smsMessage, ...rest } = sms;
+            return {
+                ...rest,
+                Messages: smsMessagesBySMSID[sms.SMS_ID] ? smsMessagesBySMSID[sms.SMS_ID].join('') : '', // รวม Messages เป็นข้อความเดียวกัน
+            };
+        });
+        res.status(200).json({ enhancedSMSResults });
+    } catch (error) {
+        console.error('Error during search:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
-
-    console.log('อัปเดต', updatedSMSManagement);
-    console.log('payload', payload);
-    console.log('payload', createdMessages);
-
-    return res.json({ updatedSMSManagement, createdMessages });
 };
 
-//! deleteSMS
-const deleteSMS: RequestHandler = async (req, res) => {
-    const schema = Joi.object({
-        SMS_ID: Joi.string().uuid().required(),
-    });
+//! ทำค้นหาเฉพราะวันที่เพียงอย่างเดียว ของ sms ScheduleDate แสดงเฉพราะ sms.Result != 'successfully'  **Waiting
+const searchdateSCW: RequestHandler = async (req, res) => {
+    try {
+        const { query } = req.query as { query: string; date: string };
+        const parsedDate = query ? new Date(query) : null;
 
-    const options = {
-        abortEarly: false,
-        allowUnknown: true,
-        stripUnknown: true,
-    };
-
-    const { error } = schema.validate(req.query, options);
-
-    if (error) {
-        return res.status(422).json({
-            status: 422,
-            message: 'Unprocessable Entity',
-            data: error.details,
+        let dateQuery;
+        if (parsedDate) {
+            const nextDay = addDays(parsedDate, 1);
+            dateQuery = {
+                gte: startOfDay(parsedDate),
+                lt: startOfDay(nextDay),
+            };
+        }
+        const smsSearchResults: any = await prisma.sMSManagement.findMany({
+            where: {
+                ScheduleDate: dateQuery,
+            },
+            orderBy: { CreatedAt: 'desc' },
+            include: {
+                userManagement: {
+                    select: {
+                        Username: true,
+                        Firstname: true,
+                        Lastname: true,
+                    },
+                },
+                smsMessage: {
+                    select: {
+                        Message: true,
+                    },
+                },
+                log_Sent: {
+                    select: {
+                        TypeLogger: true,
+                        DateLog: true,
+                    },
+                },
+            },
         });
-    }
-
-    const query: any = req.query;
-
-    const identifer = await prisma.sMSManagement.findFirst({
-        where: {
-            SMS_ID: query.SMS_ID,
-        },
-    });
-
-    if (identifer === null || identifer === undefined) {
-        return res.status(422).json({
-            status: 422,
-            message: 'User not found',
+        const smsMessagesBySMSID: { [key: string]: string[] } = {};
+        for (const sms of smsSearchResults) {
+            const smsID = sms.SMS_ID;
+            if (sms.smsMessage) {
+                if (!smsMessagesBySMSID[smsID]) {
+                    smsMessagesBySMSID[smsID] = sms.smsMessage.map((m: any) => m.Message);
+                } else {
+                    smsMessagesBySMSID[smsID].push(sms.smsMessage.map((m: any) => m.Message));
+                }
+            }
+        }
+        const filteredResults = smsSearchResults.filter((sms: any) => sms.Result !== 'successfully');
+        const enhancedSMSResults = filteredResults.map((sms: any) => {
+            const { smsMessage, ...rest } = sms;
+            return {
+                ...rest,
+                Messages: smsMessagesBySMSID[sms.SMS_ID] ? smsMessagesBySMSID[sms.SMS_ID].join('') : '', // รวม Messages เป็นข้อความเดียวกัน
+            };
         });
+        res.status(200).json({ enhancedSMSResults });
+    } catch (error) {
+        console.error('Error during search:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
-
-    const deleteSMS = await prisma.sMSManagement.delete({
-        where: {
-            SMS_ID: query.SMS_ID,
-        },
-    });
-    return res.json(deleteSMS);
 };
+
 
 //!Get User By ID Showhistory
 const UserByIDShowhistory: RequestHandler = async (req, res) => {
@@ -387,6 +283,12 @@ const UserByIDShowhistory: RequestHandler = async (req, res) => {
                                     Message: true,
                                 },
                             },
+                            log_Sent: {
+                                select: {
+                                    TypeLogger: true,
+                                    DateLog: true,
+                                },
+                            },
                         },
                     },
                 },
@@ -398,7 +300,7 @@ const UserByIDShowhistory: RequestHandler = async (req, res) => {
 
             // กรองข้อมูลที่ Result เท่ากับ 'successfully'
             const filteredByResult = userByID.map((data) => ({
-                ...data,
+                // ...data,
                 smsManagement: data.smsManagement.filter((sms) => sms.Result === 'successfully'),
             }));
 
@@ -433,6 +335,12 @@ const SMSShowhistory: RequestHandler = async (req, res) => {
                 smsMessage: {
                     select: {
                         Message: true,
+                    },
+                },
+                log_Sent: {
+                    select: {
+                        TypeLogger: true,
+                        DateLog: true,
                     },
                 },
             },
@@ -480,6 +388,12 @@ const UserByIDpendingSc: RequestHandler = async (req, res) => {
                             smsMessage: {
                                 select: {
                                     Message: true,
+                                },
+                            },
+                            log_Sent: {
+                                select: {
+                                    TypeLogger: true,
+                                    DateLog: true,
                                 },
                             },
                         },
@@ -534,6 +448,12 @@ const SMSSpendingSc: RequestHandler = async (req, res) => {
                         Message: true,
                     },
                 },
+                log_Sent: {
+                    select: {
+                        TypeLogger: true,
+                        DateLog: true,
+                    },
+                },
             },
         });
 
@@ -586,6 +506,12 @@ const UserByIDpending: RequestHandler = async (req, res) => {
                                     Message: true,
                                 },
                             },
+                            log_Sent: {
+                                select: {
+                                    TypeLogger: true,
+                                    DateLog: true,
+                                },
+                            },
                         },
                     },
                 },
@@ -633,6 +559,12 @@ const SMSShowpending: RequestHandler = async (req, res) => {
                         Message: true,
                     },
                 },
+                log_Sent: {
+                    select: {
+                        TypeLogger: true,
+                        DateLog: true,
+                    },
+                },
             },
         });
 
@@ -658,16 +590,15 @@ const SMSShowpending: RequestHandler = async (req, res) => {
 };
 
 export {
-    getSMSByID,
-    getSMSWithMessages,
-    getSMSByUserID,
-    addSMS,
-    updateSMS,
-    deleteSMS,
-    UserByIDShowhistory,
+    GetOverviewSMS,
+    GetOverviewSchedue,
+    searchdateSC,
     SMSShowhistory,
+    UserByIDShowhistory,
     UserByIDpending,
     SMSShowpending,
     UserByIDpendingSc,
     SMSSpendingSc,
+    searchdateSCS,
+    searchdateSCW,
 };

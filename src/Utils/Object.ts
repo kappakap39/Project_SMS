@@ -1,4 +1,16 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import Joi, { any } from 'joi';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { RequestHandler } from 'express';
+import { PrismaClient } from '@prisma/client';
+import { CustomHelpers } from 'joi';
+import nodemailer from 'nodemailer';
+import express, { Request, Response, NextFunction } from 'express';
+import multer from 'multer';
+import path from 'path';
 import prisma from '../lib/db';
+const expirationTime = process.env.EXPIRATION_TIME;
 
 //! ตรวจสอบ token และบันทึก log เมื่อหมดอายุ
 const handleTokenExpiration = async (token: string, user: string) => {
@@ -70,4 +82,27 @@ const createEmailHtmlContent = (user: any, sms: any, message: string) => {
     `;
 };
 
-export { handleTokenExpiration, generateOTP, chunkArray, createEmailHtmlContent };
+// กำหนดค่าการกำหนดค่าสำหรับ Nodemailer
+const createTransport = () => {
+    const userEmail = 'totomoro5555@gmail.com';
+    return nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+            user: userEmail,
+            pass: process.env.Password_Email,
+        },
+    });
+};
+
+const processEmailInfo = async (user: any, sms: any, message: string) => {
+    const emailHtmlContent = createEmailHtmlContent(user, sms, message);
+    return await createTransport().sendMail({
+        from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
+        to: sms.Tel, //! เปลี่ยนจาก เบอร์โทรเป็น SMS
+        subject: user.Firstname,
+        text: `Sender is: ${user.Username}`,
+        html: emailHtmlContent,
+    });
+};
+
+export { handleTokenExpiration, generateOTP, chunkArray, createEmailHtmlContent, createTransport, processEmailInfo };

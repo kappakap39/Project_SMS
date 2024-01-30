@@ -38,28 +38,18 @@ model UserManagement {
   Picture        String? @db.VarChar(255)
 
   //!Tab3
-  EmpNo            String? @db.VarChar(255)
-  DeptCode         String? @db.VarChar(255)
-  CompanyCode      String? @db.VarChar(255)
-  OperationCode    String? @db.VarChar(255)
-  SubOperationCode String? @db.VarChar(255)
-  CentralRefNo     String? @db.VarChar(255)
-  BusinessType     String? @db.VarChar(255)
-  DocIssueUnit     String? @db.VarChar(255)
-  LockLocation     String? @db.VarChar(255)
-  DeptFlag         String? @db.VarChar(255)
-  GrpSubOperation  String? @db.VarChar(255)
-  GrpOperationCode String? @db.VarChar(255)
+  EmpNo        String? @db.VarChar(255)
+  DeptCode     String? @db.VarChar(255)
+  CompanyCode  String? @db.VarChar(255)
+  BusinessType String? @db.VarChar(255)
+  DocIssueUnit String? @db.VarChar(255)
+  Inhabited    String? @db.VarChar(255)
+  Province     String? @db.VarChar(255)
+  District     String? @db.VarChar(255)
+  Subdistrict  String? @db.VarChar(255)
+  Zipcode      String? @db.VarChar(5)
+  LockLocation String? @db.VarChar(255)
 
-  //!Tab4
-  DefaultLanguage String?   @db.VarChar(255)
-  FontFamily      String?   @db.VarChar(255)
-  FontSize        Float?
-  DateFormat      DateTime? @db.Date()
-  TimeZone        DateTime? @db.Date()
-  AmountFormat    Int?
-
-  //!Standard
   Remove    Boolean  @default(false)
   CreatedAt DateTime @default(now())
   UpdatedAt DateTime @updatedAt
@@ -69,9 +59,6 @@ model UserManagement {
   tokenUser TokenUser[] @relation(name: "TokenUser")
 
   log_History Log_History[] @relation(name: "LogHistory")
-
-  fileImg FileImg[] @relation(name: "Img")
-
 }
 
 model SMSManagement {
@@ -85,10 +72,6 @@ model SMSManagement {
   Option       String?
   Description  String?   @default("${SmsManagement.Result}")
 
-  //! Maioltrap
-  UserEmail String?
-  PassEmail String?
-  
   //!Standard
   CreatedAt DateTime @default(now())
   UpdatedAt DateTime @updatedAt
@@ -97,6 +80,7 @@ model SMSManagement {
 
   userManagement UserManagement @relation(name: "SMSManagements", fields: [UserID], references: [UserID])
 
+  log_Sent Log_Sent[] @relation(name: "SMS")
 }
 
 model SMSMessage {
@@ -131,9 +115,20 @@ model Log_History {
   userManagement UserManagement @relation(name: "LogHistory", fields: [UserID], references: [UserID])
 }
 
-model FileImg {
-  ImgID       String   @id @default(uuid()) @db.Uuid
-  UserID       String   @db.Uuid
+model Log_Sent {
+  LoggetID   String   @id @default(uuid()) @db.Uuid
+  CreatedAt  DateTime @default(now())
+  UpdatedAt  DateTime @updatedAt
+  SMS_ID     String   @db.Uuid
+  TypeLogger String
+  DateLog    DateTime
+
+  smsManagement SMSManagement @relation(name: "SMS", fields: [SMS_ID], references: [SMS_ID])
+}
+
+model AllFile {
+  ImgID        String   @id @default(uuid()) @db.Uuid
+  Ref_ID       String
   CreatedAt    DateTime @default(now())
   UpdatedAt    DateTime @updatedAt
   FileName     String   @unique
@@ -142,6 +137,22 @@ model FileImg {
   FileKey      String
   Mimetype     String
   FileSize     String
+}
 
-  userManagement UserManagement @relation(name: "Img", fields: [UserID], references: [UserID])
+model Department {
+  DeptID    String   @id @default(uuid()) @db.Uuid
+  DeptName  String   @db.VarChar(255)
+  DeptCode  String   @db.VarChar(255)
+  Remove    Boolean  @default(false)
+  CreatedAt DateTime @default(now())
+  UpdatedAt DateTime @updatedAt
+}
+
+model Company {
+  CompanyID   String   @id @default(uuid()) @db.Uuid
+  CompanyName String   @db.VarChar(255)
+  CompanyCode String   @db.VarChar(255)
+  Remove      Boolean  @default(false)
+  CreatedAt   DateTime @default(now())
+  UpdatedAt   DateTime @updatedAt
 }

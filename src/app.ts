@@ -10,12 +10,15 @@ import Token from './routes/Login';
 import sms from './routes/SMS';
 import search from './routes/Search';
 import test from './tests/Router';
+import excel from './routes/Excel';
+import overview from './routes/overviewRoutes';
 // main.js (หรือไฟล์ที่เป็นตัวรันแอป)
 import './tests/sentMailBull'; // เรียก Worker สำหรับ Bull Queue
 
 
 //! AE router
 import user from './routes/user';
+import multer from 'multer';
 
 const app = express();
 
@@ -37,10 +40,19 @@ app.use('/user', user );
 app.use('/Token', Token);
 app.use('/sms', sms);
 app.use('/search', search);
+app.use('/overview', overview);
 
 //!/api test
 app.use('/test', test);
+app.use('/excel', excel);
 
+app.use(
+    multer({
+        limits: {
+            fileSize: 8000000, // Compliant: 8MB
+        },
+    }).none(),
+);
 
 // Apply error handling last
 app.use(fourOhFour);

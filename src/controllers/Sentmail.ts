@@ -7,13 +7,12 @@ import prisma from '../lib/db';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 const expirationTime = process.env.EXPIRATION_TIME;
-import { createEmailHtmlContent } from '../Utils/Object';
 import { isPast, parseISO, format, addHours, isValid, startOfDay, addDays } from 'date-fns';
 import { th } from 'date-fns/locale/th';
 import dayjs from 'dayjs';
-
-
+import { createEmailHtmlContent, createTransport, processEmailInfo } from '../Utils/Object';
 let data: any, sms: any, user: any;
+const transport = createTransport();
 
 //! sentSMS and Create
 const sentSMSCreate: RequestHandler = async (req, res, next) => {
@@ -197,11 +196,13 @@ const sentSMSCreate: RequestHandler = async (req, res, next) => {
 //! sentMail
 const sentMail: RequestHandler = async (req, res, next) => {
     const { SMS_ID }: any = req.query;
+
     const sms: any = await prisma.sMSManagement.findUnique({
         where: {
             SMS_ID: SMS_ID,
         },
     });
+
     if (!sms) {
         return res.status(403).json({ error: 'None SMS' });
     }
@@ -215,16 +216,6 @@ const sentMail: RequestHandler = async (req, res, next) => {
     if (!user) {
         return res.status(403).json({ error: 'None User' });
     }
-
-    // กำหนดค่าการกำหนดค่าสำหรับ Nodemailer
-    const transport = nodemailer.createTransport({
-        host: 'sandbox.smtp.mailtrap.io',
-        port: 2525,
-        auth: {
-            user: 'e226b5ee73dcdc',
-            pass: 'd171146ae7420f',
-        },
-    });
 
     // เพิ่มการตรวจสอบขีดจำกัดของอีเมล์และเตือน
     transport.verify(function (error, success) {
@@ -248,14 +239,15 @@ const sentMail: RequestHandler = async (req, res, next) => {
             CreatedAt: 'asc',
         },
     });
+
     if (!messages || messages.length === 0) {
         return res.status(403).json({ error: 'None message' });
     }
-    // สร้างข้อความจาก messages
-    const combinedMessageData = messages.map((data: any) => data.Message).join('');
+
     const scheduleDate = new Date(sms.ScheduleDate);
-    const emailHtmlContent = createEmailHtmlContent(user, sms, combinedMessageData);
-    // const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
+    // สร้างข้อความจาก messages
+    let data: any;
+    const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
     if (scheduleDate) {
         scheduleDate.setHours(scheduleDate.getHours() - 7);
         if (!isPast(scheduleDate)) {
@@ -268,22 +260,54 @@ const sentMail: RequestHandler = async (req, res, next) => {
                 // ส่งอีเมล์ทันที
                 const info = await transport.sendMail({
                     from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-                    to: user.Email,
+                    to: sms.Tel,
                     subject: user.Firstname,
                     text: `Sender is: ${user.Username}`,
                     html: emailHtmlContent,
                 });
+
+                const currentTime = new Date();
+                // const thaiTimeZone = 'Asia/Bangkok';
+                // const options = { timeZone: thaiTimeZone };
+                // // แปลงเวลาไปเป็น string ในโซนที่กำหนด
+                // const currentTimeInThailandString = currentTime.toLocaleString('th-TH', options);
+                // // แปลง string เวลากลับไปเป็น object Date
+                // const currentTimeInThailand = new Date(currentTimeInThailandString);
+                // ทำการบันทึกข้อมูลในฐานข้อมูล
+                await prisma.log_Sent.create({
+                    data: {
+                        SMS_ID,
+                        TypeLogger: 'SentMessage',
+                        DateLog: currentTime,
+                    },
+                });
             }, millisecondsUntilScheduledTime);
+
             return res.status(201).json({ Message: 'Messages created and email scheduled successfully for future' });
         } else {
             // กำหนดเวลาที่ผ่านมาหรือไม่ได้ระบุ
             // ส่งอีเมล์ทันที
             const info = await transport.sendMail({
                 from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-                to: user.Email,
+                to: sms.Tel,
                 subject: user.Firstname,
                 text: `Sender is: ${user.Username}`,
                 html: emailHtmlContent,
+            });
+            const currentTime = new Date();
+            // const thaiTimeZone = 'Asia/Bangkok';
+            // const options = { timeZone: thaiTimeZone };
+            // // แปลงเวลาไปเป็น string ในโซนที่กำหนด
+            // const currentTimeInThailandString = currentTime.toLocaleString('th-TH', options);
+            // // แปลง string เวลากลับไปเป็น object Date
+            // const currentTimeInThailand = new Date(currentTimeInThailandString);
+            // ทำการบันทึกข้อมูลในฐานข้อมูล
+            await prisma.log_Sent.create({
+                data: {
+                    SMS_ID,
+                    TypeLogger: 'SentMessage',
+                    DateLog: currentTime,
+                },
             });
             return res.status(201).json({ info, Message: 'Messages created and email sent successfully for past' });
         }
@@ -291,15 +315,23 @@ const sentMail: RequestHandler = async (req, res, next) => {
         // ส่งอีเมล์ทันที
         const info = await transport.sendMail({
             from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-            to: user.Email,
+            to: sms.Tel,
             subject: user.Firstname,
             text: `Sender is: ${user.Username}`,
             html: emailHtmlContent,
         });
+        const currentTime = new Date();
+        // ทำการบันทึกข้อมูลในฐานข้อมูล
+        await prisma.log_Sent.create({
+            data: {
+                SMS_ID,
+                TypeLogger: 'SentMessage',
+                DateLog: currentTime,
+            },
+        });
         return res.status(201).json({ info, Message: 'Messages created and email sent successfully for immediate' });
     }
 };
-
 //! sentMail140
 const sentMail140: RequestHandler = async (req, res, next) => {
     const { SMS_ID }: any = req.query;
@@ -321,16 +353,6 @@ const sentMail140: RequestHandler = async (req, res, next) => {
     if (!user) {
         return res.status(403).json({ error: 'None User' });
     }
-
-    // กำหนดค่าการกำหนดค่าสำหรับ Nodemailer
-    const transport = nodemailer.createTransport({
-        host: 'sandbox.smtp.mailtrap.io',
-        port: 2525,
-        auth: {
-            user: 'b0147891f258c2',
-            pass: '4ff23679f73610',
-        },
-    });
 
     // เพิ่มการตรวจสอบขีดจำกัดของอีเมล์และเตือน
     transport.verify(function (error, success) {
@@ -364,45 +386,39 @@ const sentMail140: RequestHandler = async (req, res, next) => {
         scheduleDate.setHours(scheduleDate.getHours() - 7);
         if (!isPast(scheduleDate)) {
             const millisecondsUntilScheduledTime = scheduleDate.getTime() - Date.now();
-            const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
-            // const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
-            //     locale: th,
-            // });
             setTimeout(async () => {
                 // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
                 const emailPromises = messages.map(async (data: any) => {
-                    const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
-                    const info = await transport.sendMail({
-                        from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-                        to: user.Email,
-                        subject: user.Firstname,
-                        text: `Sender is: ${user.Username}`,
-                        html: emailHtmlContent,
-                    });
-                    return info;
+                    return processEmailInfo(user, sms, data.Message, );
                 });
                 // รอให้การส่งอีเมลล์ทั้งหมดเสร็จสมบูรณ์ก่อนที่จะส่งคำตอบ
                 await Promise.all(emailPromises);
+                const currentTime = new Date();
+                // ทำการบันทึกข้อมูลในฐานข้อมูล
+                await prisma.log_Sent.create({
+                    data: {
+                        SMS_ID,
+                        TypeLogger: 'SentMessage',
+                        DateLog: currentTime,
+                    },
+                });
             }, millisecondsUntilScheduledTime);
             return res.status(201).json({ Message: 'Messages created and email scheduled successfully for future' });
         } else {
-            // กำหนดเวลาที่ผ่านมาหรือไม่ได้ระบุ
-            // ส่งอีเมล์ทันที
-            // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
             const emailPromises = messages.map(async (data: any) => {
-                const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
-                const info = await transport.sendMail({
-                    from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-                    to: user.Email,
-                    subject: user.Firstname,
-                    text: `Sender is: ${user.Username}`,
-                    html: emailHtmlContent,
-                });
-                return info;
+                return processEmailInfo(user, sms, data.Message, );
             });
-
             // รอให้การส่งอีเมลล์ทั้งหมดเสร็จสมบูรณ์ก่อนที่จะส่งคำตอบ
             await Promise.all(emailPromises);
+            const currentTime = new Date();
+            // ทำการบันทึกข้อมูลในฐานข้อมูล
+            await prisma.log_Sent.create({
+                data: {
+                    SMS_ID,
+                    TypeLogger: 'SentMessage',
+                    DateLog: currentTime,
+                },
+            });
             return res.status(201).json({ Message: 'Messages created and email sent successfully for past' });
         }
     } else {
@@ -411,7 +427,7 @@ const sentMail140: RequestHandler = async (req, res, next) => {
             const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
             const info = await transport.sendMail({
                 from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-                to: user.Email,
+                to: sms.Tel,
                 subject: user.Firstname,
                 text: `Sender is: ${user.Username}`,
                 html: emailHtmlContent,
@@ -420,6 +436,15 @@ const sentMail140: RequestHandler = async (req, res, next) => {
         });
         // รอให้การส่งอีเมลล์ทั้งหมดเสร็จสมบูรณ์ก่อนที่จะส่งคำตอบ
         await Promise.all(emailPromises);
+        const currentTime = new Date();
+        // ทำการบันทึกข้อมูลในฐานข้อมูล
+        await prisma.log_Sent.create({
+            data: {
+                SMS_ID,
+                TypeLogger: 'SentMessage',
+                DateLog: currentTime,
+            },
+        });
         return res.status(201).json({ Message: 'Messages created and email sent successfully for immediate' });
     }
 };
@@ -427,21 +452,9 @@ const sentMail140: RequestHandler = async (req, res, next) => {
 //! sentManySMS
 const sentManySMS: RequestHandler = async (req, res, next) => {
     const { SMS_IDs }: { SMS_IDs: any[] } = req.body;
-    // return res.status(200).json({ 'SMS_IDs:': SMS_IDs });
-    // Check if SMS_IDs is an array and not empty
     if (!Array.isArray(SMS_IDs) || SMS_IDs.length === 0) {
         return res.status(400).json({ error: 'Invalid SMS_IDs' });
     }
-
-    // กำหนดค่าการกำหนดค่าสำหรับ Nodemailer
-    const transport = nodemailer.createTransport({
-        host: 'sandbox.smtp.mailtrap.io',
-        port: 2525,
-        auth: {
-            user: 'b0147891f258c2',
-            pass: '4ff23679f73610',
-        },
-    });
 
     // เพิ่มการตรวจสอบขีดจำกัดของอีเมล์และเตือน
     transport.verify(function (error, success) {
@@ -498,64 +511,56 @@ const sentManySMS: RequestHandler = async (req, res, next) => {
             scheduleDate.setHours(scheduleDate.getHours() - 7);
             if (!isPast(scheduleDate)) {
                 const millisecondsUntilScheduledTime = scheduleDate.getTime() - Date.now();
-                const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
-                // const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'", {
-                //     locale: th,
-                // });
                 setTimeout(async () => {
                     // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
                     const emailPromises = messages.map(async (data: any) => {
-                        const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
-                        const info = await transport.sendMail({
-                            from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-                            to: user.Email,
-                            subject: user.Firstname,
-                            text: `Sender is: ${user.Username}`,
-                            html: emailHtmlContent,
-                        });
-                        return info;
+                        return processEmailInfo(user, sms, data.Message, );
                     });
                     // รอให้การส่งอีเมลล์ทั้งหมดเสร็จสมบูรณ์ก่อนที่จะส่งคำตอบ
                     await Promise.all(emailPromises);
-                }, millisecondsUntilScheduledTime);
-                // return res
-                //     .status(201)
-                //     .json({ Message: 'Messages created and email scheduled successfully for future' });
-            } else {
-                // กำหนดเวลาที่ผ่านมาหรือไม่ได้ระบุ
-                // ส่งอีเมล์ทันที
-                // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
-                const emailPromises = messages.map(async (data: any) => {
-                    const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
-                    const info = await transport.sendMail({
-                        from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-                        to: user.Email,
-                        subject: user.Firstname,
-                        text: `Sender is: ${user.Username}`,
-                        html: emailHtmlContent,
+                    const currentTime = new Date();
+                    // ทำการบันทึกข้อมูลในฐานข้อมูล
+                    await prisma.log_Sent.create({
+                        data: {
+                            SMS_ID,
+                            TypeLogger: 'SentMessage',
+                            DateLog: currentTime,
+                        },
                     });
-                    return info;
+                }, millisecondsUntilScheduledTime);
+            } else {
+                const emailPromises = messages.map(async (data: any) => {
+                    return processEmailInfo(user, sms, data.Message, );
                 });
                 // รอให้การส่งอีเมลล์ทั้งหมดเสร็จสมบูรณ์ก่อนที่จะส่งคำตอบ
                 await Promise.all(emailPromises);
-                // return res.status(201).json({ Message: 'Messages created and email sent successfully for past' });
+                const currentTime = new Date();
+                // ทำการบันทึกข้อมูลในฐานข้อมูล
+                await prisma.log_Sent.create({
+                    data: {
+                        SMS_ID,
+                        TypeLogger: 'SentMessage',
+                        DateLog: currentTime,
+                    },
+                });
             }
         } else {
             // สร้าง promises สำหรับการส่งอีเมลล์แต่ละข้อความ
             const emailPromises = messages.map(async (data: any) => {
-                const formattedScheduleDate = format(scheduleDate, "วันที่ d MMMM yyyy 'เวลา' HH:mm 'น.'");
-                const info = await transport.sendMail({
-                    from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-                    to: user.Email,
-                    subject: user.Firstname,
-                    text: `Sender is: ${user.Username}`,
-                    html: emailHtmlContent,
-                });
-                return info;
+                return processEmailInfo(user, sms, data.Message, );
             });
             // รอให้การส่งอีเมลล์ทั้งหมดเสร็จสมบูรณ์ก่อนที่จะส่งคำตอบ
             await Promise.all(emailPromises);
-            // return res.status(201).json({ Message: 'Messages created and email sent successfully for immediate' });
+            await Promise.all(emailPromises);
+            const currentTime = new Date();
+            // ทำการบันทึกข้อมูลในฐานข้อมูล
+            await prisma.log_Sent.create({
+                data: {
+                    SMS_ID,
+                    TypeLogger: 'SentMessage',
+                    DateLog: currentTime,
+                },
+            });
         }
     }
     // ส่งคำตอบหลังจากประมวลผล SMS_ID ทั้งหมด
@@ -594,15 +599,6 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
                     console.error(`User not found for SMS_ID ${SMS_ID}`);
                     return { SMS_ID, success: false, error: 'User not found' };
                 }
-
-                const transport = nodemailer.createTransport({
-                    host: 'sandbox.smtp.mailtrap.io',
-                    port: 2525,
-                    auth: {
-                        user: user.Username,
-                        pass: user.Answer,
-                    },
-                });
 
                 const verificationResult: { success: boolean; error?: any } = await new Promise((resolve) => {
                     transport.verify((error, success) => {
@@ -646,22 +642,182 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
 
                         setTimeout(async () => {
                             const emailPromises = messages.map(async (data: any) => {
-                                const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
-                                const info = await transport.sendMail({
-                                    from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-                                    to: user.Email,
-                                    subject: user.Firstname,
-                                    text: `Sender is: ${user.Username}`,
-                                    html: emailHtmlContent,
-                                });
-                                return info;
+                                return processEmailInfo(user, sms, data.Message, );
                             });
 
                             await Promise.all(emailPromises);
+                            const currentTime = new Date();
+                            // ทำการบันทึกข้อมูลในฐานข้อมูล
+                            await prisma.log_Sent.create({
+                                data: {
+                                    SMS_ID,
+                                    TypeLogger: 'SentMessage',
+                                    DateLog: currentTime,
+                                },
+                            });
+                            await prisma.sMSManagement.update({
+                                where: {
+                                    SMS_ID: sms.SMS_ID, // ต้องระบุเงื่อนไขที่ชัดเจนเพื่อระบุแถวที่จะอัปเดต
+                                },
+                                data: {
+                                    Result: 'successfully',
+                                },
+                            });
                         }, millisecondsUntilScheduledTime);
 
                         return { SMS_ID, success: true, Message: 'Email scheduled successfully for future' };
                     } else {
+                        const emailPromises = messages.map(async (data: any) => {
+                            return processEmailInfo(user, sms, data.Message, );
+                        });
+
+                        await Promise.all(emailPromises);
+                        const currentTime = new Date();
+                        // ทำการบันทึกข้อมูลในฐานข้อมูล
+                        await prisma.log_Sent.create({
+                            data: {
+                                SMS_ID,
+                                TypeLogger: 'SentMessage',
+                                DateLog: currentTime,
+                            },
+                        });
+                        await prisma.sMSManagement.update({
+                            where: {
+                                SMS_ID: sms.SMS_ID, // ต้องระบุเงื่อนไขที่ชัดเจนเพื่อระบุแถวที่จะอัปเดต
+                            },
+                            data: {
+                                Result: 'successfully',
+                            },
+                        });
+                        return { SMS_ID, success: true, Message: 'Email sent successfully for past' };
+                    }
+                } else {
+                    const emailPromises = messages.map(async (data: any) => {
+                        return processEmailInfo(user, sms, data.Message, );
+                    });
+
+                    await Promise.all(emailPromises);
+                    const currentTime = new Date();
+                    // ทำการบันทึกข้อมูลในฐานข้อมูล
+                    await prisma.log_Sent.create({
+                        data: {
+                            SMS_ID,
+                            TypeLogger: 'SentMessage',
+                            DateLog: currentTime,
+                        },
+                    });
+                    await prisma.sMSManagement.update({
+                        where: {
+                            SMS_ID: sms.SMS_ID, // ต้องระบุเงื่อนไขที่ชัดเจนเพื่อระบุแถวที่จะอัปเดต
+                        },
+                        data: {
+                            Result: 'successfully',
+                        },
+                    });
+                    return { SMS_ID, success: true, Message: 'Email sent successfully for immediate' };
+                }
+            }),
+        );
+
+        res.status(201).json({ results, Message: 'Messages emails scheduled/sent successfully.' });
+    } catch (error) {
+        console.error('Error in sentManyPort:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+};
+
+//! smsid หนึงไอดีได้หลายพอต ซึ่งจะส่งแนบพอตแบบอาเรย์ในบอดี้
+const sentOneSMSmanyPort: RequestHandler = async (req, res, next) => {
+    const { SMS_ID } = req.body;
+    const { Portuser, Portpass }: { SMS_IDs: any[]; Portuser: any[]; Portpass: any[] } = req.body;
+
+    if (!SMS_ID) {
+        return res.status(400).json({ error: 'Invalid SMS_ID' });
+    }
+    if (!Array.isArray(Portuser) || !Array.isArray(Portpass) || Portuser.length !== Portpass.length) {
+        return res.status(400).json({ error: 'Invalid Portuser or Portpass arrays' });
+    }
+
+    try {
+        const sms: any = await prisma.sMSManagement.findUnique({
+            where: {
+                SMS_ID: SMS_ID,
+            },
+        });
+
+        // ตรวจสอบว่า SMS มีหรือไม่
+        if (!sms) {
+            console.error(`SMS_ID ${SMS_ID} not found`);
+            return res.status(400).json({ SMS_ID, success: false, error: 'SMS not found' });
+        }
+        // ดึงข้อมูล user จากฐานข้อมูล
+        const user: any = await prisma.userManagement.findUnique({
+            where: {
+                UserID: sms.UserID,
+            },
+        });
+
+        // ตรวจสอบว่า User มีหรือไม่
+        if (!user) {
+            console.error(`User not found for SMS_ID ${SMS_ID}`);
+            return { SMS_ID, success: false, error: 'User not found' };
+        }
+
+        // สร้าง credentials และ transporter สำหรับ Nodemailer สำหรับแต่ละคู่ของ Portuser และ Portpass
+        const transportPromises = Portuser.map(async (portUser, index) => {
+            const authCredentials = {
+                user: portUser,
+                pass: Portpass[index],
+            };
+
+            const transport = nodemailer.createTransport({
+                host: 'sandbox.smtp.mailtrap.io',
+                port: 2525,
+                auth: authCredentials,
+            });
+
+            const verificationResult: { success: boolean; error?: any } = await new Promise((resolve) => {
+                transport.verify((error, success) => {
+                    if (error) {
+                        console.error(`Mailtrap connection error for SMS_ID ${SMS_ID}:`, error);
+                        resolve({ success: false, error: error });
+                    } else {
+                        console.log(`Mailtrap connection successful for SMS_ID ${SMS_ID}`);
+                        resolve({ success: true });
+                    }
+                });
+            });
+
+            // ตรวจสอบว่าการเชื่อมต่อ Mailtrap สำเร็จหรือไม่
+            if (!verificationResult.success) {
+                return { SMS_ID, success: false, error: verificationResult.error };
+            }
+
+            const messages: any = await prisma.sMSMessage.findMany({
+                where: {
+                    SMS_ID: sms.SMS_ID,
+                },
+                select: {
+                    Message: true,
+                },
+                orderBy: {
+                    CreatedAt: 'asc',
+                },
+            });
+
+            if (!messages || messages.length === 0) {
+                return { SMS_ID, success: false, error: 'None message' };
+            }
+
+            const scheduleDate = new Date(sms.ScheduleDate);
+
+            if (scheduleDate) {
+                scheduleDate.setHours(scheduleDate.getHours() - 7);
+
+                if (!isPast(scheduleDate)) {
+                    const millisecondsUntilScheduledTime = scheduleDate.getTime() - Date.now();
+
+                    setTimeout(async () => {
                         const emailPromises = messages.map(async (data: any) => {
                             const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
                             const info = await transport.sendMail({
@@ -675,8 +831,24 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
                         });
 
                         await Promise.all(emailPromises);
-                        return { SMS_ID, success: true, Message: 'Email sent successfully for past' };
-                    }
+                        const currentTime = new Date();
+                        // const thaiTimeZone = 'Asia/Bangkok';
+                        // const options = { timeZone: thaiTimeZone };
+                        // // แปลงเวลาไปเป็น string ในโซนที่กำหนด
+                        // const currentTimeInThailandString = currentTime.toLocaleString('th-TH', options);
+                        // // แปลง string เวลากลับไปเป็น object Date
+                        // const currentTimeInThailand = new Date(currentTimeInThailandString);
+                        // ทำการบันทึกข้อมูลในฐานข้อมูล
+                        await prisma.log_Sent.create({
+                            data: {
+                                SMS_ID,
+                                TypeLogger: 'SentMessage',
+                                DateLog: currentTime,
+                            },
+                        });
+                    }, millisecondsUntilScheduledTime);
+
+                    return { Portuser, Portpass, success: true, Message: 'Email scheduled successfully for future' };
                 } else {
                     const emailPromises = messages.map(async (data: any) => {
                         const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
@@ -689,17 +861,62 @@ const sentManyPort: RequestHandler = async (req, res, next) => {
                         });
                         return info;
                     });
-
                     await Promise.all(emailPromises);
-                    return { SMS_ID, success: true, Message: 'Email sent successfully for immediate' };
+                    const currentTime = new Date();
+                    // const thaiTimeZone = 'Asia/Bangkok';
+                    // const options = { timeZone: thaiTimeZone };
+                    // // แปลงเวลาไปเป็น string ในโซนที่กำหนด
+                    // const currentTimeInThailandString = currentTime.toLocaleString('th-TH', options);
+                    // // แปลง string เวลากลับไปเป็น object Date
+                    // const currentTimeInThailand = new Date(currentTimeInThailandString);
+                    // ทำการบันทึกข้อมูลในฐานข้อมูล
+                    await prisma.log_Sent.create({
+                        data: {
+                            SMS_ID,
+                            TypeLogger: 'SentMessage',
+                            DateLog: currentTime,
+                        },
+                    });
+                    return { Portuser, Portpass, success: true, Message: 'Email sent successfully for past' };
                 }
-            }),
-        );
+            } else {
+                const emailPromises = messages.map(async (data: any) => {
+                    const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
+                    const info = await transport.sendMail({
+                        from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
+                        to: user.Email,
+                        subject: user.Firstname,
+                        text: `Sender is: ${user.Username}`,
+                        html: emailHtmlContent,
+                    });
+                    return info;
+                });
 
-        res.status(201).json({ results, Message: 'Messages emails scheduled/sent successfully.' });
+                await Promise.all(emailPromises);
+                const currentTime = new Date();
+                // const thaiTimeZone = 'Asia/Bangkok';
+                // const options = { timeZone: thaiTimeZone };
+                // // แปลงเวลาไปเป็น string ในโซนที่กำหนด
+                // const currentTimeInThailandString = currentTime.toLocaleString('th-TH', options);
+                // // แปลง string เวลากลับไปเป็น object Date
+                // const currentTimeInThailand = new Date(currentTimeInThailandString);
+                // ทำการบันทึกข้อมูลในฐานข้อมูล
+                await prisma.log_Sent.create({
+                    data: {
+                        SMS_ID,
+                        TypeLogger: 'SentMessage',
+                        DateLog: currentTime,
+                    },
+                });
+                return { Portuser, Portpass, success: true, Message: 'Email sent successfully for immediate' };
+            }
+        });
+        const results = await Promise.all(transportPromises);
+        // ส่งผลลัพธ์ของแต่ละ SMS_ID
+        res.status(201).json({ results, Message: 'Email scheduled/sent successfully' });
     } catch (error) {
-        console.error('Error in sentManyPort:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
+        console.error(`Error processing SMS_ID ${SMS_ID}:`, error);
+        return res.status(500).json({ Portuser, Portpass, success: false, error: 'Internal Server Error' });
     }
 };
 
@@ -810,6 +1027,21 @@ const sentManyPortSMS: RequestHandler = async (req, res, next) => {
                                 });
 
                                 await Promise.all(emailPromises);
+                                const currentTime = new Date();
+                                // const thaiTimeZone = 'Asia/Bangkok';
+                                // const options = { timeZone: thaiTimeZone };
+                                // // แปลงเวลาไปเป็น string ในโซนที่กำหนด
+                                // const currentTimeInThailandString = currentTime.toLocaleString('th-TH', options);
+                                // // แปลง string เวลากลับไปเป็น object Date
+                                // const currentTimeInThailand = new Date(currentTimeInThailandString);
+                                // ทำการบันทึกข้อมูลในฐานข้อมูล
+                                await prisma.log_Sent.create({
+                                    data: {
+                                        SMS_ID,
+                                        TypeLogger: 'SentMessage',
+                                        DateLog: currentTime,
+                                    },
+                                });
                             }, millisecondsUntilScheduledTime);
 
                             return { SMS_ID, success: true, Message: 'Email scheduled successfully for future' };
@@ -827,6 +1059,21 @@ const sentManyPortSMS: RequestHandler = async (req, res, next) => {
                             });
 
                             await Promise.all(emailPromises);
+                            const currentTime = new Date();
+                            // const thaiTimeZone = 'Asia/Bangkok';
+                            // const options = { timeZone: thaiTimeZone };
+                            // // แปลงเวลาไปเป็น string ในโซนที่กำหนด
+                            // const currentTimeInThailandString = currentTime.toLocaleString('th-TH', options);
+                            // // แปลง string เวลากลับไปเป็น object Date
+                            // const currentTimeInThailand = new Date(currentTimeInThailandString);
+                            // ทำการบันทึกข้อมูลในฐานข้อมูล
+                            await prisma.log_Sent.create({
+                                data: {
+                                    SMS_ID,
+                                    TypeLogger: 'SentMessage',
+                                    DateLog: currentTime,
+                                },
+                            });
                             return { SMS_ID, success: true, Message: 'Email sent successfully for past' };
                         }
                     } else {
@@ -843,6 +1090,21 @@ const sentManyPortSMS: RequestHandler = async (req, res, next) => {
                         });
 
                         await Promise.all(emailPromises);
+                        const currentTime = new Date();
+                        // const thaiTimeZone = 'Asia/Bangkok';
+                        // const options = { timeZone: thaiTimeZone };
+                        // // แปลงเวลาไปเป็น string ในโซนที่กำหนด
+                        // const currentTimeInThailandString = currentTime.toLocaleString('th-TH', options);
+                        // // แปลง string เวลากลับไปเป็น object Date
+                        // const currentTimeInThailand = new Date(currentTimeInThailandString);
+                        // ทำการบันทึกข้อมูลในฐานข้อมูล
+                        await prisma.log_Sent.create({
+                            data: {
+                                SMS_ID,
+                                TypeLogger: 'SentMessage',
+                                DateLog: currentTime,
+                            },
+                        });
                         return { SMS_ID, success: true, Message: 'Email sent successfully for immediate' };
                     }
                 });
@@ -857,155 +1119,6 @@ const sentManyPortSMS: RequestHandler = async (req, res, next) => {
         // แสดง error กรณีมีปัญหา
         console.error('Error in sentManyPortSMS:', error);
         res.status(500).json({ error: 'Internal Server Error' });
-    }
-};
-
-//! smsid หนึงไอดีได้หลายพอต ซึ่งจะส่งแนบพอตแบบอาเรย์ในบอดี้
-const sentOneSMSmanyPort: RequestHandler = async (req, res, next) => {
-    const { SMS_ID } = req.body;
-    const { Portuser, Portpass }: { SMS_IDs: any[]; Portuser: any[]; Portpass: any[] } = req.body;
-
-    if (!SMS_ID) {
-        return res.status(400).json({ error: 'Invalid SMS_ID' });
-    }
-    if (!Array.isArray(Portuser) || !Array.isArray(Portpass) || Portuser.length !== Portpass.length) {
-        return res.status(400).json({ error: 'Invalid Portuser or Portpass arrays' });
-    }
-
-    try {
-        const sms: any = await prisma.sMSManagement.findUnique({
-            where: {
-                SMS_ID: SMS_ID,
-            },
-        });
-
-        // ตรวจสอบว่า SMS มีหรือไม่
-        if (!sms) {
-            console.error(`SMS_ID ${SMS_ID} not found`);
-            return res.status(400).json({ SMS_ID, success: false, error: 'SMS not found' });
-        }
-        // ดึงข้อมูล user จากฐานข้อมูล
-        const user: any = await prisma.userManagement.findUnique({
-            where: {
-                UserID: sms.UserID,
-            },
-        });
-
-        // ตรวจสอบว่า User มีหรือไม่
-        if (!user) {
-            console.error(`User not found for SMS_ID ${SMS_ID}`);
-            return { SMS_ID, success: false, error: 'User not found' };
-        }
-
-        // สร้าง credentials และ transporter สำหรับ Nodemailer สำหรับแต่ละคู่ของ Portuser และ Portpass
-        const transportPromises = Portuser.map(async (portUser, index) => {
-            const authCredentials = {
-                user: portUser,
-                pass: Portpass[index],
-            };
-
-            const transport = nodemailer.createTransport({
-                host: 'sandbox.smtp.mailtrap.io',
-                port: 2525,
-                auth: authCredentials,
-            });
-
-            const verificationResult: { success: boolean; error?: any } = await new Promise((resolve) => {
-                transport.verify((error, success) => {
-                    if (error) {
-                        console.error(`Mailtrap connection error for SMS_ID ${SMS_ID}:`, error);
-                        resolve({ success: false, error: error });
-                    } else {
-                        console.log(`Mailtrap connection successful for SMS_ID ${SMS_ID}`);
-                        resolve({ success: true });
-                    }
-                });
-            });
-
-            // ตรวจสอบว่าการเชื่อมต่อ Mailtrap สำเร็จหรือไม่
-            if (!verificationResult.success) {
-                return { SMS_ID, success: false, error: verificationResult.error };
-            }
-
-            const messages: any = await prisma.sMSMessage.findMany({
-                where: {
-                    SMS_ID: sms.SMS_ID,
-                },
-                select: {
-                    Message: true,
-                },
-                orderBy: {
-                    CreatedAt: 'asc',
-                },
-            });
-
-            if (!messages || messages.length === 0) {
-                return { SMS_ID, success: false, error: 'None message' };
-            }
-
-            const scheduleDate = new Date(sms.ScheduleDate);
-
-            if (scheduleDate) {
-                scheduleDate.setHours(scheduleDate.getHours() - 7);
-
-                if (!isPast(scheduleDate)) {
-                    const millisecondsUntilScheduledTime = scheduleDate.getTime() - Date.now();
-
-                    setTimeout(async () => {
-                        const emailPromises = messages.map(async (data: any) => {
-                            const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
-                            const info = await transport.sendMail({
-                                from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-                                to: user.Email,
-                                subject: user.Firstname,
-                                text: `Sender is: ${user.Username}`,
-                                html: emailHtmlContent,
-                            });
-                            return info;
-                        });
-
-                        await Promise.all(emailPromises);
-                    }, millisecondsUntilScheduledTime);
-
-                    return { SMS_ID, success: true, Message: 'Email scheduled successfully for future' };
-                } else {
-                    const emailPromises = messages.map(async (data: any) => {
-                        const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
-                        const info = await transport.sendMail({
-                            from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-                            to: user.Email,
-                            subject: user.Firstname,
-                            text: `Sender is: ${user.Username}`,
-                            html: emailHtmlContent,
-                        });
-                        return info;
-                    });
-                    await Promise.all(emailPromises);
-                    return { Portuser, Portpass, success: true, Message: 'Email sent successfully for past' };
-                }
-            } else {
-                const emailPromises = messages.map(async (data: any) => {
-                    const emailHtmlContent = createEmailHtmlContent(user, sms, data.Message);
-                    const info = await transport.sendMail({
-                        from: `sent mail to ${user.Firstname} ${user.Lastname} ${user.Email}`,
-                        to: user.Email,
-                        subject: user.Firstname,
-                        text: `Sender is: ${user.Username}`,
-                        html: emailHtmlContent,
-                    });
-                    return info;
-                });
-
-                await Promise.all(emailPromises);
-                return { Portuser, Portpass, success: true, Message: 'Email sent successfully for immediate' };
-            }
-        });
-        const results = await Promise.all(transportPromises);
-        // ส่งผลลัพธ์ของแต่ละ SMS_ID
-        res.status(201).json({ results, Message: 'Email scheduled/sent successfully' });
-    } catch (error) {
-        console.error(`Error processing SMS_ID ${SMS_ID}:`, error);
-        return res.status(500).json({ Portuser, Portpass, success: false, error: 'Internal Server Error' });
     }
 };
 
